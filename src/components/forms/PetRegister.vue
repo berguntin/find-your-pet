@@ -97,7 +97,7 @@
 import { ref } from 'vue'
 import { XIcon } from 'lucide-vue-next'
 import { savePet } from '@/api/index'
-import AlertComponent from '@/alertComponent.vue';
+import AlertComponent from '@/components/alertComponent.vue';
 
 const isSubmitting = ref(false)
 
