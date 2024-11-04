@@ -1,10 +1,17 @@
 import pool from '../config/database.js';
 import { v4 as uuidv4 } from 'uuid';
+import { uploadImages } from '../services/cloudinary.js'
 
 export const getAllPets = async (req, res) => {
   try {
     const [rows] = await pool.query('SELECT * FROM pets');
-    res.json(rows);
+    
+    const pets = rows.map(pet => ({
+      ...pet,
+      images: pet.images ? JSON.parse(pet.images) : [] 
+    }));
+
+    res.json(pets);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -23,50 +30,61 @@ export const getPetById = async (req, res) => {
 };
 
 export const createPet = async (req, res) => {
+
   try {
     const {
       type,
-      image,
       description,
       name,
       status,
       location,
       alive,
       contact,
-      date,
-      atHome,
-      createdBy
+      date
     } = req.body;
+  
+    const insert_id = uuidv4();
+    
+    const created_at = new Date()
+    const created_by = 'admin' // TODO create users?
+   
+    const cloudinaryResponse = await uploadImages(req.files)
 
-    const id = uuidv4();
-    const createdAt = new Date().toISOString();
-
+    const uploadedImageJSON = JSON.stringify(cloudinaryResponse)
+    
     const query = `
       INSERT INTO pets (
-        id, type, image, description, name, status, 
-        location, alive, contact, date, atHome, 
-        createdBy, createdAt
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `;
+        id, type, images, description, name, status, 
+        location, alive, contact, date, 
+        created_by, created_at
+      ) VALUES (UUID_TO_BIN(?), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+
 
     await pool.query(query, [
-      id, type, image, description, name, status,
-      location, alive, contact, date, atHome,
-      createdBy, createdAt
+      insert_id, type, uploadedImageJSON, description, name, status,
+      location, Boolean(alive), contact, date,
+      created_by, created_at
     ]);
 
-    res.status(201).json({ id, ...req.body, createdAt });
+    res.status(201).json({ insert_id, ...req.body, created_at });
+
   } catch (error) {
+
     res.status(500).json({ message: error.message });
+
   }
 };
 
 export const updatePet = async (req, res) => {
   try {
     const {
-      type, image, description, name, status,
+      type, images, description, name, status,
       location, alive, contact, date, atHome
     } = req.body;
+
+    let uploadedImages = await processImages(images)
+
+    uploadedImages = uploadedImages.map(image => image.secure_url)
 
     const query = `
       UPDATE pets 
@@ -77,7 +95,7 @@ export const updatePet = async (req, res) => {
     `;
 
     const [result] = await pool.query(query, [
-      type, image, description, name, status,
+      type, uploadedImages, description, name, status,
       location, alive, contact, date, atHome,
       req.params.id
     ]);
@@ -103,3 +121,4 @@ export const deletePet = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
