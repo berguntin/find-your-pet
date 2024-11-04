@@ -30,14 +30,7 @@
               <span class="label-text">Imágenes</span>
             </label>
             <input type="file" required id="image" @change="handleImageUpload" multiple accept="image/*" class="file-input file-input-bordered w-full" />
-            <div v-if="form.images.length > 0" class="mt-2 flex flex-wrap gap-2">
-              <div v-for="(image, index) in form.images" :key="index" class="relative">
-                <img :src="URL.createObjectURL(image)" alt="Subir imagenes" class="h-20 w-20 object-cover rounded" />
-                <button @click.prevent="removeImage(index)" class="btn btn-circle btn-xs absolute top-0 right-0 bg-error text-white">
-                  <XIcon class="w-4 h-4" />
-                </button>
-              </div>
-            </div>
+        
           </div>
           <div class="form-control">
             <label class="label" for="name">
@@ -124,10 +117,8 @@ const form = ref({
 const alert = ref(null)
 
 const handleImageUpload = (event) => {
-  const files = event.target.files;
-  for (let i = 0; i < files.length; i++) {
-    form.value.images.push(files[i]);
-  }
+  const files = Array.from(event.target.files);
+  form.value.images.push(...files)
 };
 
 const removeImage = (index) => {
@@ -135,6 +126,8 @@ const removeImage = (index) => {
 }
 
 const submitForm = async () => {
+  isSubmitting.value = true
+
   let formData = new FormData();
   
   Object.entries(form.value).forEach(([key, value]) => {
@@ -148,8 +141,8 @@ const submitForm = async () => {
   });
 
   const response = await savePet(formData);
-
-  if (!response) {
+  
+  if (!response || !response.ok) {
    alert.value = {
       type: 'error',
       message: 'Ha ocurrido un error, por favor, inténtelo de nuevo'
@@ -161,5 +154,6 @@ const submitForm = async () => {
       message: 'Se ha registrado correctamente la mascota'
     }
   }
+  isSubmitting.value = false
 };
 </script>

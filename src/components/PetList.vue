@@ -67,7 +67,6 @@ const loadPets = async () => {
   try {
     pets.value = await getList()
     loading.value = false
-    console.log(pets.value)
   } catch (e) {
     error.value = 'Error al cargar los datos de las mascotas. Por favor, inténtelo de nuevo más tarde.'
     loading.value = false

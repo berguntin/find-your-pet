@@ -1,4 +1,4 @@
-import { createMemoryHistory, createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHistory } from 'vue-router'
 
 
 const routes = [

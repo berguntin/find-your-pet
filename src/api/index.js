@@ -35,7 +35,7 @@ export const setAtHome = async (petId) => {
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ atHome: true })
+            body: JSON.stringify({ athome: true })
         });
 
         if (!response.ok) {

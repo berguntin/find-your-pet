@@ -2,7 +2,7 @@
   <div class="card bg-base-100 shadow-xl">
     <figure class="relative">
       <img :class="['w-full h-80 object-cover', !pet.alive ? 'blur-md hover:blur-0 transition duration-300 ease-in-out' : '']" :src="pet.images[0]" :alt="pet.breed">
-      <div v-if="pet.atHome" 
+      <div v-if="pet.athome" 
            class="absolute top-2 left-2 badge badge-primary badge-lg gap-2">
         <HomeIcon class="w-4 h-4" />
         EN CASA
@@ -31,8 +31,9 @@
         <div v-if="!pet.alive" class="badge badge-neutral">Fallecido</div>
       </div>
       <p class="text-sm mt-2">{{ pet.description }}</p>
-      <div v-if="pet.alive && !pet.atHome" class="card-actions justify-end mt-4">
-        <button :class="['btn btn-sm text-gray-50', error ? 'btn-warning' :  'btn-primary']" @click="markAtHome(pet.id)">
+      <div v-if="pet.alive && !pet.athome" class="card-actions justify-end mt-4">
+        <button :class="['btn btn-sm text-gray-50', error ? 'btn-warning' :  'btn-primary']" 
+                @click="markAtHome(pet.id)" :disabled="isLoading">
           {{error ? error : 'Marcar como "en casa"'}}
         </button>
       </div>
@@ -47,14 +48,13 @@ import { setAtHome } from '../api';
 import { ref } from 'vue';
 import { defineEmits } from 'vue';
 
+const isLoading = ref(false)
 
 const props = defineProps({
   pet: {
     type: Object,
     required: true,
-    validator: (pet) => {
-      return ['id','status', 'photoUrl', 'breed', 'location', 'date', 'description', 'contact'].every(key => key in pet)
-    }
+
   }
 })
 
@@ -64,8 +64,10 @@ const error = ref(false);
 
 const markAtHome = async (petId) => {
   try {
-    const response = await setAtHome(petId);
 
+    isLoading.value = true
+    const response = await setAtHome(petId);
+    
     if (response && response.success) { 
       emit('updateList'); 
     } else {
@@ -75,6 +77,7 @@ const markAtHome = async (petId) => {
     error.value = 'Ha ocurrido un error';
     console.error(err);
   }
+  isLoading.value = false
 };
 
 </script>
