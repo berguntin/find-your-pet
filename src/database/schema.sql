@@ -1,26 +1,25 @@
 CREATE DATABASE IF NOT EXISTS pets_db;
 USE pets_db;
 
-CREATE TABLE IF NOT EXISTS pets (
-  id BINARY(16) PRIMARY KEY,
-  type ENUM('Perro', 'Gato', 'Otro') NOT NULL,
-  images TEXT,
-  description TEXT,
-  name VARCHAR(100),
-  status ENUM('lost', 'found') NOT NULL,
-  location VARCHAR(255) NOT NULL,
-  alive BOOLEAN DEFAULT true,
-  contact VARCHAR(250) NOT NULL,
-  date DATE NOT NULL,
-  atHome BOOLEAN DEFAULT false,
-  created_by VARCHAR(36) NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+create type pet_type as enum('Perro', 'Gato', 'Otro');
 
-CREATE TABLE IF NOT EXISTS users (
-  id BINARY(16) PRIMARY KEY,
-  name VARCHAR(100),
-  email VARCHAR(200),
-  phone VARCHAR(100),
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-)
+create type pet_status as enum('lost', 'found');
+
+create table if not exists
+  pets (
+    id uuid primary key default gen_random_uuid (),
+    type text check (
+      type in ('Perro', 'Gato', 'Otro')
+    ) not null,
+    images JSONB,
+    description text,
+    name text,
+    status text check (status in ('lost', 'found')) not null,
+    location text not null,
+    alive boolean default true,
+    contact text not null,
+    date timestamp with time zone not null,
+    atHome boolean default false,
+    created_by text not null,
+    created_at timestamp with time zone default current_timestamp
+  );

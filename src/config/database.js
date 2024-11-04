@@ -1,16 +1,12 @@
-import mysql from 'mysql2/promise';
+// supabaseClient.js
+import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-const pool = mysql.createPool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0
-});
+const supabaseUrl = process.env.SUPABASE_URL; 
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY; 
 
-export default pool;
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+export default supabase;

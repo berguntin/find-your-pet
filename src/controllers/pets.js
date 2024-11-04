@@ -1,15 +1,16 @@
-import pool from '../config/database.js';
-import { v4 as uuidv4, stringify } from 'uuid';
-import { uploadImages } from '../services/cloudinary.js'
+import supabase from '../config/database.js';
+import { v4 as uuidv4 } from 'uuid';
+import { uploadImages } from '../services/cloudinary.js';
 
 export const getAllPets = async (req, res) => {
   try {
-    const [rows] = await pool.query('SELECT * FROM pets');
+    const { data, error } = await supabase.from('pets').select('*');
     
-    const pets = rows.map(pet => ({
+    if (error) throw error;
+
+    const pets = data.map(pet => ({
       ...pet,
-      id: stringify(Array.from(pet.id)),
-      images: pet.images ? JSON.parse(pet.images) : [] 
+      images: pet.images ? JSON.parse(pet.images) : []
     }));
 
     res.json(pets);
@@ -20,18 +21,22 @@ export const getAllPets = async (req, res) => {
 
 export const getPetById = async (req, res) => {
   try {
-    const [rows] = await pool.query('SELECT * FROM pets WHERE id = ?', [req.params.id]);
-    if (rows.length === 0) {
-      return res.status(404).json({ message: 'Pet not found' });
+    const { data, error } = await supabase.from('pets').select('*').eq('id', req.params.id).single();
+    
+    if (error) {
+      if (error.message.includes('not found')) {
+        return res.status(404).json({ message: 'Pet not found' });
+      }
+      throw error;
     }
-    res.json(rows[0]);
+
+    res.json(data);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
 export const createPet = async (req, res) => {
-
   try {
     const {
       type,
@@ -43,74 +48,73 @@ export const createPet = async (req, res) => {
       contact,
       date
     } = req.body;
-  
-    const insert_id = uuidv4();
-    
-    const created_at = new Date()
-    const created_by = 'web' // TODO create users?
-   
-    const cloudinaryResponse = await uploadImages(req.files)
 
-    const uploadedImageJSON = JSON.stringify(cloudinaryResponse)
-    
-    const query = `
-      INSERT INTO pets (
-        id, type, images, description, name, status, 
-        location, alive, contact, date, 
-        created_by, created_at
-      ) VALUES (UUID_TO_BIN(?), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+    const created_at = new Date();
+    const created_by = 'web'; //TODO add users?
 
+    const cloudinaryResponse = await uploadImages(req.files);
+    const uploadedImageJSON = JSON.stringify(cloudinaryResponse);
 
-    await pool.query(query, [
-      insert_id, type, uploadedImageJSON, description, name, status,
-      location, Boolean(alive), contact, date,
-      created_by, created_at
-    ]);
+    const { error } = await supabase.from('pets').insert([{
+      type,
+      images: uploadedImageJSON,
+      description,
+      name,
+      status,
+      location,
+      alive: Boolean(alive),
+      contact,
+      date,
+      created_by, 
+      created_at
+    }]);
 
-    res.status(201).json({ insert_id, ...req.body, created_at });
+    if (error) throw error;
+
+    res.status(201).json({ success: true, message: 'Pet created successfully' });
 
   } catch (error) {
-
-    res.status(500).json({ message: error.message });
-
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
+
 export const updatePet = async (req, res) => {
   try {
-    const { atHome } = req.body;
+    const { athome } = req.body;
 
-    const query = `
-      UPDATE pets 
-      SET atHome = ?
-      WHERE id = UUID_TO_BIN(?)
-    `;
+    const { error } = await supabase
+      .from('pets')
+      .update({ athome })
+      .eq('id', req.params.id);
 
-    const [result] = await pool.query(query, [
-      atHome,
-      req.params.id
-    ]);
-
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ message: 'Pet not found' });
+    if (error) {
+      if (error.message.includes('not found')) {
+        return res.status(404).json({ message: 'Pet not found' });
+      }
+      throw error;
     }
 
     res.json({ success: true, message: 'Pet updated successfully' });
 
   } catch (error) {
-    res.status(500).json({success: false, message: error.message });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
 export const deletePet = async (req, res) => {
   try {
-    const [result] = await pool.query('DELETE FROM pets WHERE id = ?', [req.params.id]);
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ message: 'Pet not found' });
+    const { error } = await supabase.from('pets').delete().eq('id', req.params.id);
+    
+    if (error) {
+      if (error.message.includes('not found')) {
+        return res.status(404).json({ message: 'Pet not found' });
+      }
+      throw error;
     }
+
     res.json({ message: 'Pet deleted successfully' });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
-
