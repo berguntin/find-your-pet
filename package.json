@@ -11,6 +11,7 @@
   "dependencies": {
     "lucide-vue-next": "^0.454.0",
     "tailwind": "^4.0.0",
+    "vite-plugin-vercel": "^9.0.3",
     "vue": "^3.5.12",
     "vue-router": "^4.4.5"
   },
