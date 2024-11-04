@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-base-200 p-4">
+  <div class="min-h-screen bg-base-200 p-4 mb-5">
     <div class="max-w-md mx-auto">
       <h1 class="text-4xl font-bold text-center mb-8">Registrar Mascota</h1>
       <div  v-if="!alert" class="card bg-base-100 shadow-xl">
@@ -45,12 +45,18 @@
             <textarea v-model="form.description" id="description" required rows="3" class="textarea textarea-bordered"></textarea>
           </div>
           <div class="form-control">
+            <label class="label" for="date">
+              <span class="label-text">Fecha</span>
+            </label>
+            <input v-model="form.date" type="date" id="date" :max="new Date().toISOString().split('T')[0]" required class="input input-bordered" />
+          </div>
+          <div class="form-control">
             <label class="label" for="location">
               <span class="label-text">Ubicación (Nombre de población)</span>
             </label>
             <input v-model="form.location" type="text" id="location" required class="input input-bordered" />
           </div>
-
+          
           <div v-if="form.status === 'found'" class="form-control">
             <span class="label-text">¿Está vivo?</span>
             <div class="flex flex-row gap-2">
@@ -71,13 +77,6 @@
               <span class="label-text">Contacto (teléfono, email, instagram, etc..)</span>
             </label>
             <input v-model="form.contact" type="text" id="contact" required class="input input-bordered" />
-          </div>
-
-          <div class="form-control">
-            <label class="label" for="date">
-              <span class="label-text">Fecha</span>
-            </label>
-            <input v-model="form.date" type="date" id="date" required class="input input-bordered" />
           </div>
 
           <div class="form-control mt-6">
