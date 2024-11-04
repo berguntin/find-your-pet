@@ -5,7 +5,7 @@ import vercel from 'vite-plugin-vercel'
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [vue()],
+  plugins: [vue(), vercel()],
   resolve: {
     alias:[ 
       { find : '@', replacement: fileURLToPath(new URL('./src', import.meta.url)) }
