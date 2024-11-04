@@ -3,22 +3,22 @@
     <h1 class="text-4xl font-bold mb-8 text-center">Mascotas Perdidas y Encontradas en Valencia</h1>
     
     <div class="mb-8 flex justify-center">
-      <div class="btn-group">
+      <div class="join">
         <button 
           @click="filterStatus = 'all'" 
-          :class="['btn', filterStatus === 'all' ? 'btn-active' : '']"
+          :class="['btn join-item', filterStatus === 'all' ? 'btn-active' : '']"
         >
           Todas
         </button>
         <button 
           @click="filterStatus = 'lost'" 
-          :class="['btn', filterStatus === 'lost' ? 'btn-active' : '']"
+          :class="['btn join-item', filterStatus === 'lost' ? 'btn-active' : '']"
         >
           Perdidas
         </button>
         <button 
           @click="filterStatus = 'found'" 
-          :class="['btn', filterStatus === 'found' ? 'btn-active' : '']"
+          :class="['btn join-item', filterStatus === 'found' ? 'btn-active' : '']"
         >
           Encontradas
         </button>
@@ -40,6 +40,7 @@
         v-for="pet in filteredPets" 
         :key="pet.id" 
         :pet="pet"
+        @updateList="loadPets"
       />
     </div>
 
@@ -60,7 +61,9 @@ const loading = ref(true)
 const error = ref(null)
 const filterStatus = ref('all')
 
-onMounted(async () => {
+
+
+const loadPets = async () => {
   try {
     pets.value = await getList()
     loading.value = false
@@ -69,12 +72,13 @@ onMounted(async () => {
     error.value = 'Error al cargar los datos de las mascotas. Por favor, inténtelo de nuevo más tarde.'
     loading.value = false
   }
-})
-
+}
 const filteredPets = computed(() => {
   if (filterStatus.value === 'all') {
     return pets.value
   }
   return pets.value.filter(pet => pet.status === filterStatus.value)
 })
+
+onMounted(loadPets)
 </script>
