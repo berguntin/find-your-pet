@@ -1,5 +1,5 @@
 import pool from '../config/database.js';
-import { v4 as uuidv4 } from 'uuid';
+import { v4 as uuidv4, stringify } from 'uuid';
 import { uploadImages } from '../services/cloudinary.js'
 
 export const getAllPets = async (req, res) => {
@@ -8,6 +8,7 @@ export const getAllPets = async (req, res) => {
     
     const pets = rows.map(pet => ({
       ...pet,
+      id: stringify(Array.from(pet.id)),
       images: pet.images ? JSON.parse(pet.images) : [] 
     }));
 
@@ -46,7 +47,7 @@ export const createPet = async (req, res) => {
     const insert_id = uuidv4();
     
     const created_at = new Date()
-    const created_by = 'admin' // TODO create users?
+    const created_by = 'web' // TODO create users?
    
     const cloudinaryResponse = await uploadImages(req.files)
 
@@ -77,26 +78,16 @@ export const createPet = async (req, res) => {
 
 export const updatePet = async (req, res) => {
   try {
-    const {
-      type, images, description, name, status,
-      location, alive, contact, date, atHome
-    } = req.body;
-
-    let uploadedImages = await processImages(images)
-
-    uploadedImages = uploadedImages.map(image => image.secure_url)
+    const { atHome } = req.body;
 
     const query = `
       UPDATE pets 
-      SET type = ?, image = ?, description = ?, name = ?, 
-          status = ?, location = ?, alive = ?, contact = ?, 
-          date = ?, atHome = ?
-      WHERE id = ?
+      SET atHome = ?
+      WHERE id = UUID_TO_BIN(?)
     `;
 
     const [result] = await pool.query(query, [
-      type, uploadedImages, description, name, status,
-      location, alive, contact, date, atHome,
+      atHome,
       req.params.id
     ]);
 
@@ -104,9 +95,10 @@ export const updatePet = async (req, res) => {
       return res.status(404).json({ message: 'Pet not found' });
     }
 
-    res.json({ message: 'Pet updated successfully' });
+    res.json({ success: true, message: 'Pet updated successfully' });
+
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({success: false, message: error.message });
   }
 };
 
