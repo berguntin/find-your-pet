@@ -53,8 +53,8 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import { getList } from '../api/index'
-import PetCard from '../components/PetCard.vue'
+import { getList } from '@/api/index'
+import PetCard from '@/components/PetCard.vue'
 
 const pets = ref([])
 const loading = ref(true)

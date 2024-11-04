@@ -5,12 +5,12 @@ const routes = [
   { 
     path: '/', 
     name: 'Home',
-    component: () => import ('../views/Homeview.vue')   
+    component: () => import ('@/views/Homeview.vue')   
   },
   {
     path: '/registrar',
     name: 'RegisterForm',
-    component: () => import('../views/RegisterView.vue')
+    component: () => import('@/views/RegisterView.vue')
   }
 ]
 

@@ -43,8 +43,8 @@
 
 <script setup>
 import { MapPinIcon, CalendarIcon, PhoneIcon, HomeIcon, UserIcon } from 'lucide-vue-next'
-import { formatDate } from '../helpers/dateHelper'
-import { setAtHome } from '../api';
+import { formatDate } from '@/helpers/dateHelper'
+import { setAtHome } from '@/api';
 import { ref } from 'vue';
 import { defineEmits } from 'vue';
 
