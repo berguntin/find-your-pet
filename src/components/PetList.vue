@@ -1,76 +1,80 @@
 <template>
-    <div class="container mx-auto p-4">
-      <h1 class="text-3xl font-bold mb-6 text-center">Mascotas Perdidas y Encontradas en Valencia</h1>
-      
-      <div class="mb-6 flex justify-center gap-2">
+  <div class="container mx-auto p-4">
+    <h1 class="text-4xl font-bold mb-8 text-center">Mascotas Perdidas y Encontradas en Valencia</h1>
+    
+    <div class="mb-8 flex justify-center">
+      <div class="btn-group">
         <button 
           @click="filterStatus = 'all'" 
-          :class="['px-4 py-2 rounded-l-lg', filterStatus === 'all' ? 'bg-blue-500 text-white' : 'bg-gray-200']"
+          :class="['btn', filterStatus === 'all' ? 'btn-active' : '']"
         >
           Todas
         </button>
         <button 
           @click="filterStatus = 'lost'" 
-          :class="['px-4 py-2', filterStatus === 'lost' ? 'bg-blue-500 text-white' : 'bg-gray-200']"
+          :class="['btn', filterStatus === 'lost' ? 'btn-active' : '']"
         >
           Perdidas
         </button>
         <button 
           @click="filterStatus = 'found'" 
-          :class="['px-4 py-2 rounded-r-lg', filterStatus === 'found' ? 'bg-blue-500 text-white' : 'bg-gray-200']"
+          :class="['btn', filterStatus === 'found' ? 'btn-active' : '']"
         >
           Encontradas
         </button>
       </div>
-  
-      <div v-if="loading" class="text-center text-xl">
-        <Loader2Icon class="animate-spin inline-block mr-2" />
-        Cargando...
-      </div>
-  
-      <div v-else-if="error" class="text-center text-xl text-red-500">
-        {{ error }}
-      </div>
-  
-      <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <PetCard 
-          v-for="pet in filteredPets" 
-          :key="pet.id" 
-          :pet="pet"
-        />
-      </div>
-  
-      <div v-if="filteredPets.length === 0 && !loading" class="text-center text-xl mt-6">
-        No se encontraron mascotas que coincidan con el filtro seleccionado.
-      </div>
     </div>
-  </template>
-  
-  <script setup>
-  import { ref, onMounted, computed } from 'vue'
-  import { getList } from '../api/mockdata.js'
-  import PetCard from '../components/PetCard.vue'
-  import { Loader2Icon } from 'lucide-vue-next'
-  
-  const pets = ref([])
-  const loading = ref(true)
-  const error = ref(null)
-  const filterStatus = ref('all')
-  
-  onMounted(async () => {
-    try {
-      pets.value = await getList()
-      loading.value = false
-    } catch (e) {
-      error.value = 'Error al cargar los datos de las mascotas. Por favor, inténtelo de nuevo más tarde.'
-      loading.value = false
-    }
-  })
-  
-  const filteredPets = computed(() => {
-    if (filterStatus.value === 'all') {
-      return pets.value
-    }
-    return pets.value.filter(pet => pet.status === filterStatus.value)
-  })
-  </script>
+
+    <div v-if="loading" class="text-center">
+      <span class="loading loading-spinner loading-lg"></span>
+      <p class="text-xl mt-4">Cargando...</p>
+    </div>
+
+    <div v-else-if="error" class="alert alert-error">
+      <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+      <span>{{ error }}</span>
+    </div>
+
+    <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <PetCard 
+        v-for="pet in filteredPets" 
+        :key="pet.id" 
+        :pet="pet"
+      />
+    </div>
+
+    <div v-if="filteredPets.length === 0 && !loading" class="alert alert-info mt-8">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+      <span>No se encontraron mascotas que coincidan con el filtro seleccionado.</span>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, onMounted, computed } from 'vue'
+import { getList } from '../api/index'
+import PetCard from '../components/PetCard.vue'
+
+const pets = ref([])
+const loading = ref(true)
+const error = ref(null)
+const filterStatus = ref('all')
+
+onMounted(async () => {
+  try {
+    pets.value = await getList()
+    loading.value = false
+    console.log(pets.value)
+  } catch (e) {
+    error.value = 'Error al cargar los datos de las mascotas. Por favor, inténtelo de nuevo más tarde.'
+    loading.value = false
+  }
+})
+
+const filteredPets = computed(() => {
+  if (filterStatus.value === 'all') {
+    return pets.value
+  }
+  return pets.value.filter(pet => pet.status === filterStatus.value)
+})
+</script>
