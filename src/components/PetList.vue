@@ -1,6 +1,6 @@
 <template>
   <div class="container mx-auto p-4">
-    <h1 class="text-4xl font-bold mb-8 text-center">Mascotas Perdidas y Encontradas en Valencia</h1>
+    <h1 class="text-xl font-bold mb-8 text-center">Mascotas Perdidas y Encontradas en Valencia</h1>
     
     <div class="mb-8 flex justify-center">
       <div class="join">

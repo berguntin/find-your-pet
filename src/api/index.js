@@ -48,3 +48,23 @@ export const setAtHome = async (petId) => {
         throw error;
     }
 };
+
+export const getPetById = async (petId) => {
+
+    try {
+        
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/${petId}`, {
+            type: 'GET'
+        })
+
+        if (!response.ok) {
+            throw new Error('Error en la solicitud');
+        }
+
+        return await response.json();
+
+    } catch (error) {
+        console.error('Error:', error);
+        throw error;
+    }
+}
