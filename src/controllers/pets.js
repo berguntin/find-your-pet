@@ -4,7 +4,7 @@ import { uploadImages } from '../services/cloudinary.js';
 
 export const getAllPets = async (req, res) => {
   try {
-    const { data, error } = await supabase.from('pets').select('*');
+    const { data, error } = await supabase.from('pets').select('*').order('created_at', {ascending: false});
     
     if (error) throw error;
 
@@ -25,7 +25,7 @@ export const getPetById = async (req, res) => {
     
     if (error) {
       if (error.message.includes('not found')) {
-        return res.status(404).json({ message: 'Pet not found' });
+        return res.status(404).json({ success: false, message: 'Pet not found' });
       }
       throw error;
     }
