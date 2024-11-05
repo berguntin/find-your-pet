@@ -9,7 +9,7 @@
               :key="index" 
               :src="photo" 
               :alt="`Photo of ${pet.name || 'pet'}`"
-              class="absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ease-in-out"
+              class="absolute inset-0 w-full h-full object-contain transition-opacity duration-500 ease-in-out"
               :class="{ 'opacity-100': currentPhotoIndex === index, 'opacity-0': currentPhotoIndex !== index }"
             >
             <div class="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
