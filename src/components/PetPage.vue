@@ -53,7 +53,7 @@
                     pet.status === 'lost' ? 'badge-error' : 'badge-warning text-gray-900'
                   ]"
                 >
-                  {{ pet.status === 'lost' ? 'Perdido' : 'Encontrado' }}
+                  {{ pet.status === 'lost' ? 'Me buscan' : 'Encontrado' }}
                 </span>
                 <span 
                   :class="[

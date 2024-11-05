@@ -10,7 +10,7 @@
       </div>
       <div v-if="!pet.athome" class="absolute top-2 right-2 badge badge-lg text-gray-100"
            :class="pet.status === 'lost' ? 'badge-error' : 'badge-warning text-gray-900'">
-        {{ pet.status === 'lost' ? 'Perdido' : 'Encontrado' }}
+        {{ pet.status === 'lost' ? 'Me buscan' : 'Encontrado' }}
       </div>
     </figure>
     <div class="card-body p-4">
