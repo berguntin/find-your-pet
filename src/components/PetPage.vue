@@ -30,15 +30,7 @@
             <div class="p-6">
               <div class="flex justify-between items-center my-4">
                 <h1 class="text-3xl font-bold text-gray-800">{{ pet.name }}</h1>
-                <span v-if="pet.athome" class="badge badge-accent badge-lg p-4">Reunido con su familia!!</span>
-                <span v-else 
-                  :class="[
-                    'px-3 py-1 rounded-full text-sm font-semibold',
-                    pet.status === 'lost' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
-                  ]"
-                >
-                  {{ pet.status === 'lost' ? 'Perdido' : 'Encontrado' }}
-                </span>
+                
               </div>
               <div class="flex flex-row justify-between my-1">
                 <div class="flex items-center">
@@ -52,11 +44,21 @@
               
               </div>
               
-              <div class="flex items-center mb-4" v-if="pet.status === 'found'">
+              <div class="flex justify-start gap-3 align-middle mb-4" v-if="pet.status === 'found'">
+                
+                <span v-if="pet.athome" class="badge badge-accent badge-lg p-4">Reunido con su familia!!</span>
+                <span v-else 
+                  :class="[
+                    'px-3 py-1 badge font-semibold',
+                    pet.status === 'lost' ? 'badge-error' : 'badge-warning text-gray-900'
+                  ]"
+                >
+                  {{ pet.status === 'lost' ? 'Perdido' : 'Encontrado' }}
+                </span>
                 <span 
                   :class="[
-                    'px-3 py-1 rounded-full text-sm font-semibold mr-2',
-                    pet.alive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                    'px-3 py-1 badge font-semibold mr-2',
+                    pet.alive ? 'badge-success' : 'bg-red-100 text-red-800'
                   ]"
                 >
                   {{ pet.alive ? 'Vivo' : 'Fallecido' }}
