@@ -28,7 +28,7 @@
         <div class="md:w-1/2 h-full" >
           <div class="bg-white shadow-lg rounded-lg overflow-hidden">
             <div class="p-6">
-              <div class="flex justify-between items-center mb-4">
+              <div class="flex justify-between items-center my-4">
                 <h1 class="text-3xl font-bold text-gray-800">{{ pet.name }}</h1>
                 <span v-if="pet.athome" class="badge badge-accent badge-lg p-4">Reunido con su familia!!</span>
                 <span v-else 
@@ -39,12 +39,19 @@
                 >
                   {{ pet.status === 'lost' ? 'Perdido' : 'Encontrado' }}
                 </span>
-                
               </div>
-              <p class="text-gray-600 mb-2">
-                <CalendarIcon class="inline-block w-5 h-5 mr-2" />
-                {{ formatDate(pet.date) }}
-              </p>
+              <div class="flex flex-row justify-between my-1">
+                <div class="flex items-center">
+                <MapPinIcon class="w-4 h-4 mr-1" />
+                    <span class="text-gray-600">{{ pet.location }}</span>
+                </div>
+                <div class="flex items-center">
+                    <CalendarIcon class="w-4 h-4 mr-1"/>
+                    <span class="text-gray-600"> {{ formatDate(pet.date) }}</span>
+                </div>
+              
+              </div>
+              
               <div class="flex items-center mb-4" v-if="pet.status === 'found'">
                 <span 
                   :class="[
@@ -55,7 +62,7 @@
                   {{ pet.alive ? 'Vivo' : 'Fallecido' }}
                 </span>
               </div>
-              <p class="text-gray-700 mb-4 p-2">{{ pet.description }}</p>
+              <p class="text-gray-700 my-4">{{ pet.description }}</p>
               <div class="mb-4">
                 <h2 class="text-lg font-semibold text-gray-800 mb-2">Contacto:</h2>
                 <p class="text-gray-600">{{ pet.contact }}</p>
@@ -75,7 +82,7 @@
   
 <script setup>
     import { onMounted, ref } from 'vue'
-    import { CalendarIcon } from 'lucide-vue-next'
+    import { CalendarIcon, MapPinIcon } from 'lucide-vue-next'
     import { useRoute } from 'vue-router';
     import { formatDate } from '@/helpers/dateHelper'
     import { getPetById } from '../api';
