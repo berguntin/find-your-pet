@@ -1,5 +1,40 @@
-# Vue 3 + Vite
+# MASCOTAS PERDIDAS Y ENCONTRADAS (front)
 
-This template should help get you started developing with Vue 3 in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+Este proyecto tiene como finalidad facilitar a mascotas y familias reunirse de nuevo.
 
-Learn more about IDE Support for Vue in the [Vue Docs Scaling up Guide](https://vuejs.org/guide/scaling-up/tooling.html#ide-support).
+Ha sido creado con carácter de urgencia debido a la gran cantidad de peludos perdidos tras el paso de la DANA en Valencia, el pasado 29 de Octubre de 2024.
+
+
+## TODO
+- [ ] Buscador
+- [ ] Filtrado por localidad
+- [ ] Paginación
+- [ ] Botón compartir en redes sociales
+- [ ] Metadatos
+- [ ] Footer
+
+## Iniciar el proyecto en local
+
+Crea un fichero env siguiento en ```.env.example```
+
+Añade el API de desarrollo ```lostfoundapi-git-development-berguntins-projects.vercel.app```
+
+[ Opcional ] Puedes crear tu propia API
+
+### Instalar dependencias
+```
+npm install
+``` 
+
+### Iniciar proyecto
+```
+npm run dev
+```
+
+## Stack
+El proyecto utiliza Vite + Vue + Vue router, como dependencias tenemos tailwind para estilos y lucide para iconos.
+
+
+## Como contribuir
+
+Si quieres contribuir, [escribeme un mail](mailto:hugo.bermudez@me.com?subject=[Mascotas Dana] Quiero colaborar en el proyecto)
