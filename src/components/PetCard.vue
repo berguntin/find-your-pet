@@ -1,7 +1,7 @@
 <template>
   <div class="card bg-base-100 shadow-xl" @click="$router.push({name: 'Pet', params: {id: pet.id}})">
     <figure class="relative">
-      <img :class="['w-full h-80 object-cover', !pet.alive ? 'blur-md' : '']" 
+      <img loading="lazy" :class="['w-full h-80 object-cover', !pet.alive ? 'blur-md' : '']" 
             :src="pet.images[0]" :alt="pet.breed">
       <div v-if="pet.athome" 
            class="absolute top-2 left-2 badge badge-primary badge-lg gap-2 p-4">
