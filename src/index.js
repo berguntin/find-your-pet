@@ -9,8 +9,10 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 const corsOptions = {
-  origin: '*'
+  origin: process.env.ENVIRONMENT === 'development' 
+          ? '*' : process.env.PROD_FRONT_URL
 }
+
 const corsConfig = process.env.ENVIRONMENT === 'development' ? corsOptions : {}
 
 app.use(cors(corsConfig));
