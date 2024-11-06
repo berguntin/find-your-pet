@@ -37,4 +37,4 @@ El proyecto utiliza Vite + Vue + Vue router, como dependencias tenemos tailwind 
 
 ## Como contribuir
 
-Si quieres contribuir, [escribeme un mail](mailto:hugo.bermudez@me.com?subject=[Mascotas Dana] Quiero colaborar en el proyecto)
+Si quieres contribuir, [escribeme un mail](mailto:hugo.bermudez@me.com?subject=[Mascotas%20Dana]%20Quiero%20colaborar%20en%20el%20proyecto)
