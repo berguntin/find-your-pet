@@ -15,9 +15,9 @@ Ha sido creado con carácter de urgencia debido a la gran cantidad de peludos pe
 
 ## Iniciar el proyecto en local
 
-Crea un fichero env siguiento en ```.env.example```
+Crea un fichero .env siguiento en ```.env.example```
 
-Añade el API de desarrollo ```lostfoundapi-git-development-berguntins-projects.vercel.app```
+Añade el API de desarrollo ```https://lostfoundapi-git-development-berguntins-projects.vercel.app/?vercelToolbarCode=5iahZh1vWA5H5w0/api/pets```
 
 [ Opcional ] Puedes crear tu propia API
 
