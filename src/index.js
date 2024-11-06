@@ -13,8 +13,6 @@ const corsOptions = {
           ? '*' : process.env.PROD_FRONT_URL
 }
 
-const corsConfig = process.env.ENVIRONMENT === 'development' ? corsOptions : {}
-
 app.use(cors(corsConfig));
 app.use(express.json());
 
