@@ -8,7 +8,12 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 3000;
 
-app.use(cors());
+const corsOptions = {
+  origin: '*'
+}
+const corsConfig = process.env.ENVIRONMENT === 'development' ? corsOptions : {}
+
+app.use(cors(corsConfig));
 app.use(express.json());
 
 app.use('/api/pets', petsRoutes);
