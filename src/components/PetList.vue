@@ -78,22 +78,23 @@ const loadPets = async () => {
 }
 
 const filteredPets = computed(() => {
-  
-  if (searchQuery.value) {
-    return pets.value.filter((pet) => {
-     
-      return Object.values(pet).some((value) => {
-        if(typeof value !== 'string') return false
+  return pets.value.filter((pet) => {
+   
+    const matchesSearchQuery = searchQuery.value
+      ? Object.values(pet).some((value) => {
+          if (typeof value !== 'string') return false;
+          return value.toLowerCase().includes(searchQuery.value.toLowerCase());
+        })
+      : true;
 
-        return value.toLowerCase().includes(searchQuery.value.toLowerCase());
-      });
-    });
-  }
 
-  if (filterStatus.value !== 'all') {
-    return pets.value.filter(pet => pet.status === filterStatus.value);
-  }
-  return pets.value
+    const matchesStatus = filterStatus.value !== 'all'
+      ? pet.status === filterStatus.value
+      : true;
+
+    
+    return matchesSearchQuery && matchesStatus;
+  });
 });
 
 onMounted(loadPets)
