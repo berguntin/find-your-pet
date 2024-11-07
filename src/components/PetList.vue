@@ -1,7 +1,7 @@
 <template>
   <div class="container mx-auto p-4">
     <h1 class="text-xl font-bold mb-8 text-center">Mascotas Perdidas y Encontradas en Valencia</h1>
-    
+     <Searchbar @updateQuery = search />
     <div class="mb-8 flex justify-center">
       <div class="join">
         <button 
@@ -55,14 +55,18 @@
 import { ref, onMounted, computed } from 'vue'
 import { getList } from '@/api/index'
 import PetCard from '@/components/PetCard.vue'
+import Searchbar from './Searchbar.vue';
 
 const pets = ref([])
 const loading = ref(true)
 const error = ref(null)
 const filterStatus = ref('all')
 
+const searchQuery = ref('')
 
-
+const search = (value) => {
+  searchQuery.value = value
+}
 const loadPets = async () => {
   try {
     pets.value = await getList()
@@ -72,12 +76,25 @@ const loadPets = async () => {
     loading.value = false
   }
 }
+
 const filteredPets = computed(() => {
-  if (filterStatus.value === 'all') {
-    return pets.value
+  
+  if (searchQuery.value) {
+    return pets.value.filter((pet) => {
+     
+      return Object.values(pet).some((value) => {
+        if(typeof value !== 'string') return false
+
+        return value.toLowerCase().includes(searchQuery.value.toLowerCase());
+      });
+    });
   }
-  return pets.value.filter(pet => pet.status === filterStatus.value)
-})
+
+  if (filterStatus.value !== 'all') {
+    return pets.value.filter(pet => pet.status === filterStatus.value);
+  }
+  return pets.value
+});
 
 onMounted(loadPets)
 </script>
