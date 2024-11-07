@@ -40,7 +40,7 @@
   
   const clearSearch = () => {
     searchQuery.value = ''
-    emit('updateQuery', '')
+    emits('updateQuery', '')
   }
   </script>
   
