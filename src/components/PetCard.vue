@@ -3,8 +3,9 @@
     <figure class="relative">
       <img loading="lazy" :class="['w-full h-80 object-cover', !pet.alive ? 'blur-md' : '']" 
             :src="pet.images[0]" :alt="pet.breed">
-            <div v-if="!pet.alive" class="absolute inset-0 flex justify-center items-center">
-              <EyeOffIcon class="w-10 h-10 text-gray-50"/>
+            <div v-if="!pet.alive" class="absolute inset-0 flex justify-center items-center flex-col text-gray-50">
+              <EyeOffIcon class="w-10 h-10"/>
+              <span>Contenido sensible</span>
             </div>
       <div v-if="pet.athome" 
            class="absolute top-2 left-2 badge badge-primary badge-lg gap-2 p-4">
