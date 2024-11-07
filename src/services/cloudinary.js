@@ -18,7 +18,7 @@ export const uploadImages = async (files) => {
                         transformation: [
                             { width: 800, height: 600, crop: "limit" },
                             { quality: "auto" }, 
-                            { fetch_format: "auto" }
+                            { fetch_format: "webp" }
                         ]
                     },
                     (error, result) => {
