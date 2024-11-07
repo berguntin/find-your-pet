@@ -62,7 +62,7 @@ export const createPet = async (req, res) => {
       name,
       status,
       location,
-      alive: Boolean(alive),
+      alive,
       contact,
       date,
       created_by, 
