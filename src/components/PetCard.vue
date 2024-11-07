@@ -3,6 +3,9 @@
     <figure class="relative">
       <img loading="lazy" :class="['w-full h-80 object-cover', !pet.alive ? 'blur-md' : '']" 
             :src="pet.images[0]" :alt="pet.breed">
+            <div v-if="!pet.alive" class="absolute inset-0 flex justify-center items-center">
+              <EyeOffIcon class="w-10 h-10 text-gray-50"/>
+            </div>
       <div v-if="pet.athome" 
            class="absolute top-2 left-2 badge badge-primary badge-lg gap-2 p-4">
         <HomeIcon class="w-4 h-4" />
@@ -42,7 +45,7 @@
 </template>
 
 <script setup>
-import { MapPinIcon, CalendarIcon, HomeIcon, UserIcon, ArrowRight } from 'lucide-vue-next'
+import { MapPinIcon, CalendarIcon, HomeIcon, UserIcon, ArrowRight, EyeOffIcon } from 'lucide-vue-next'
 import { formatDate } from '@/helpers/dateHelper'
 import { ref } from 'vue';
 import { defineEmits } from 'vue';
