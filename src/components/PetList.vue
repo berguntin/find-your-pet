@@ -55,7 +55,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { getList } from '@/api/index'
 import PetCard from '@/components/PetCard.vue'
-import Searchbar from '@/Searchbar.vue';
+import Searchbar from '@/components/Searchbar.vue';
 
 const pets = ref([])
 const loading = ref(true)
