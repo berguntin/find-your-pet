@@ -7,9 +7,12 @@ services:
       - 127.0.0.1:3000:3000
     volumes:
       - ./backend:/app
-      # todo node_modules should be created with current user and group id, not root
     networks:
       - public
+      - private
+    depends_on:
+      - db
+
   frontend:
     build:
       context: frontend
@@ -23,6 +26,29 @@ services:
       - public
     depends_on:
       - backend
+
+  db:
+    image: postgres
+    restart: always
+    secrets:
+      - db-password
+    volumes:
+      - ./db/init.d:/docker-entrypoint-initdb.d
+      - db-data:/var/lib/postgresql/data
+    networks:
+      - private
+    environment:
+      - POSTGRES_DB=pets
+      - POSTGRES_PASSWORD_FILE=/run/secrets/db-password
+
+volumes:
+  db-data:
+
+secrets:
+  db-password:
+    file: db/password.txt
+
 networks:
   public:
+  private:
 

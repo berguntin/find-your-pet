@@ -1,6 +1,3 @@
-CREATE DATABASE IF NOT EXISTS pets_db;
-USE pets_db;
-
 create type pet_type as enum('Perro', 'Gato', 'Otro');
 
 create type pet_status as enum('lost', 'found');
@@ -23,3 +20,8 @@ create table if not exists
     created_by text not null,
     created_at timestamp with time zone default current_timestamp
   );
+
+COPY pets
+    FROM '/docker-entrypoint-initdb.d/pets.csv'
+    DELIMITER ','
+    CSV HEADER;
