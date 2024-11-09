@@ -1,0 +1,28 @@
+services:
+  backend:
+    build:
+      context: backend
+      target: development
+    ports:
+      - 127.0.0.1:3000:3000
+    volumes:
+      - ./backend:/app
+      # todo node_modules should be created with current user and group id, not root
+    networks:
+      - public
+  frontend:
+    build:
+      context: frontend
+      target: development
+    ports:
+      - 127.0.0.1:5173:5173
+    volumes:
+      - ./frontend:/app
+      # todo node_modules should be created with current user and group id, not root
+    networks:
+      - public
+    depends_on:
+      - backend
+networks:
+  public:
+
