@@ -22,6 +22,8 @@ services:
     volumes:
       - ./frontend:/app
       # todo node_modules should be created with current user and group id, not root
+    environment:
+      VITE_API_URL: "http://localhost:3000/api/pets"
     networks:
       - public
     depends_on:
