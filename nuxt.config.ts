@@ -18,4 +18,12 @@ export default defineNuxtConfig({
   tailwindcss: {
     cssPath: "~/assets/css/app.css",
   },
+  imports: {
+    dirs: ["types"],
+  },
+  runtimeConfig: {
+    public: {
+      apiBase: "https://api.mascotasdana.es/api",
+    },
+  },
 });

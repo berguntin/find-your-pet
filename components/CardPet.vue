@@ -1,6 +1,6 @@
 <script setup lang="ts">
 const props = defineProps<{
-  modelValue?: boolean;
+  pet: Pet;
 }>();
 </script>
 
@@ -9,14 +9,18 @@ const props = defineProps<{
     <figure>
       <div
         class="absolute top-2 right-2 badge badge-lg text-base-100 badge-accent"
+        :class="{
+          'badge-accent': pet.status === 'lost',
+          'badge-info': pet.status === 'found',
+        }"
       >
-        Me buscan
+        {{ pet.status === "lost" ? "Perdido" : "Se busca dueño" }}
       </div>
       <img
         loading="lazy"
         class="w-full h-80 object-cover"
-        src="https://res.cloudinary.com/dj2xpupyt/image/upload/v1730786411/pets/muz9hlsfbxuwpa5advec.jpg"
-        alt="undefined - Image 1"
+        :src="pet.images[0]"
+        :alt="pet.name"
       />
     </figure>
     <div class="card-body">
@@ -24,21 +28,20 @@ const props = defineProps<{
         <div class="flex w-full justify-between">
           <div class="flex items-center gap-2">
             <Icon name="bxs:map" />
-            <p>Manises</p>
+            <p>{{ pet.location }}</p>
           </div>
           <div class="flex items-center gap-2">
             <Icon name="mdi-light:calendar" />
-            <p>29/10/2024</p>
+            <p>{{ formatDate(pet.date) }}</p>
           </div>
         </div>
       </div>
       <p class="flex items-center gap-3">
         <Icon name="fluent-mdl2:contact" />
-        <span>603854595</span>
+        <span>{{ pet.contact }}</span>
       </p>
       <p>
-        Hola,se llama thor y está perdido desde el martes en cheste,zona de la
-        garrama.
+        {{ pet.description }}
       </p>
 
       <div class="card-actions justify-end">
