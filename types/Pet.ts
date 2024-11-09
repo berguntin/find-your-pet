@@ -3,7 +3,7 @@ export type status = "all" | "lost" | "found";
 export interface Pet {
   id: string;
   type: string;
-  images: string[];
+  images: string[] | string;
   description: string;
   name: string;
   status: status;

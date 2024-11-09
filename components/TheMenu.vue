@@ -10,7 +10,7 @@ const props = defineProps<{
       <Icon name="material-symbols:close" size="1.5rem" />
     </label>
     <ul class="menu flex-col lg:flex-row lg:menu-horizontal gap-3">
-      <li><button class="btn btn-md">Inicio</button></li>
+      <li><NuxtLink to="/" class="btn btn-md">Inicio</NuxtLink></li>
       <li>
         <button class="btn btn-outline btn-primary btn-md md:btn-xl">
           + Añadir mascota
