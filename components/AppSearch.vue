@@ -4,7 +4,7 @@
   <label
     class="input input-bordered rounded-full flex items-center gap-2 max-w-md mx-auto my-5"
   >
-    <input type="text" class="grow" placeholder="Buscar..." />
+    <input type="search" class="grow" placeholder="Buscar..." />
     <svg
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 16 16"
