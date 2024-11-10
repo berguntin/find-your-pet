@@ -7,25 +7,26 @@ const props = defineProps<{
 <template>
   <div>
     <div class="card bg-base-100 shadow-xl h-full">
-      <figure>
-        <div
-          class="absolute top-2 right-2 badge badge-lg text-base-100 badge-accent"
-          :class="{
-            'badge-accent': pet.status === 'lost',
-            'badge-info': pet.status === 'found',
-          }"
-        >
-          {{ pet.status === "lost" ? "Perdido" : "Se busca dueño" }}
-        </div>
-        <NuxtLink :to="{ name: 'mascota-id', params: { id: pet.id } }">
+      <NuxtLink :to="{ name: 'mascota-id', params: { id: pet.id } }">
+        <figure>
+          <div
+            class="absolute top-2 right-2 badge badge-lg text-base-100 badge-accent"
+            :class="{
+              'badge-accent': pet.status === 'lost',
+              'badge-info': pet.status === 'found',
+            }"
+          >
+            {{ pet.status === "lost" ? "Perdido" : "Se busca dueño" }}
+          </div>
+
           <img
             loading="lazy"
             class="w-full h-80 object-cover"
             :src="pet.images[0]"
             :alt="pet.name"
           />
-        </NuxtLink>
-      </figure>
+        </figure>
+      </NuxtLink>
       <div class="card-body">
         <div class="card-title">
           <div class="flex w-full justify-between">
