@@ -22,8 +22,6 @@ export default defineNuxtConfig({
     dirs: ["types"],
   },
   runtimeConfig: {
-    public: {
-      apiBase: "https://api.mascotasdana.es/api",
-    },
+    apiBase: "https://api.mascotasdana.es/api",
   },
 });

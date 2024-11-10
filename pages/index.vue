@@ -1,17 +1,12 @@
 <script setup lang="ts">
 import type { Filters } from "~/types/Filters";
 
-const runtimeConfig = useRuntimeConfig();
 const actualFilters = ref<Filters>({
   status: "all",
   location: "",
 });
 
-const {
-  data: pets,
-  status,
-  error,
-} = await useFetch<Pet[]>(`${runtimeConfig.public.apiBase}/pets`);
+const { data: pets, status, error } = await useLazyFetch<Pet[]>("/api/pets");
 
 const getPets = computed(() => {
   if (!pets.value) return [];
@@ -30,6 +25,8 @@ const setFilter = (filters: Filters) => {
   <AppHero />
   <AppFilters @@set-filter="setFilter" />
   <AppError v-if="error" class="mx-auto" />
-  <AppLoading v-if="status === 'pending'" class="text-center py-8" />
-  <ListPets v-if="pets" :pets="getPets" />
+  <ClientOnly>
+    <AppLoading v-if="status === 'pending'" class="text-center py-8" />
+  </ClientOnly>
+  <ListPets :pets="getPets" />
 </template>

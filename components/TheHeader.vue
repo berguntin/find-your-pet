@@ -8,7 +8,10 @@ const props = defineProps<{
   <header class="bg-base-200">
     <div class="container mx-auto flex items-center justify-between">
       <div>
-        <p class="text-xl md:text-3xl text-primary font-bold;">MASCOTAS DANA</p>
+        <p class="text-xl md:text-3xl text-primary font-bold;">
+          <NuxtLink to="/">MASCOTAS DANA</NuxtLink>
+        </p>
+
         <p>Mascotas Perdidas y Encontradas en Valencia</p>
       </div>
       <TheNavBar />
