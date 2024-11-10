@@ -1,13 +1,38 @@
+<script setup>
+import { MapPinIcon, CalendarIcon, HomeIcon, UserIcon, ArrowRight, EyeOffIcon } from 'lucide-vue-next'
+import { ref } from 'vue';
+import { defineEmits } from 'vue';
+import ShareButton from '@/components/social/ButtonShare.vue';
+// import function to register Swiper custom elements
+import { register } from 'swiper/element/bundle';
+// register Swiper custom elements
+register();
+
+
+const props = defineProps({
+  pet: {
+    type: Object,
+    required: true,
+
+  }
+})
+
+const emit = defineEmits(['updateList']);
+
+const error = ref(false);
+
+</script>
+
 <template>
   <div class="card bg-base-100 shadow-xl">
-    <figure class="relative">
-      <swiper-container class="w-full h-80" pagination="true">
+    <figure class="relative h-[300px]">
+      <swiper-container class="w-full h-[300px]" pagination="true">
         <swiper-slide v-for="(image, index) in pet.images" :key="index">
           <img loading="lazy" :class="['w-full h-80 object-cover', !pet.alive ? 'blur-md' : '']" 
                :src="image" :alt="`${pet.breed} - Image ${index + 1}`">
         </swiper-slide>
       </swiper-container>
-      <div v-if="!pet.alive" class="absolute inset-0 flex justify-center items-center flex-col text-gray-50">
+      <div v-if="!pet.alive" class="absolute z-10 inset-0 flex justify-center items-center flex-col text-gray-50">
         <EyeOffIcon class="w-10 h-10"/>
         <span>Contenido sensible</span>
       </div>
@@ -35,9 +60,7 @@
       <div class="flex items-center justify-between mt-2">
         <div class="flex items-center">
           <UserIcon class="w-4 h-4 mr-1" />
-          <a v-if="isPhone(pet.contact)" :href="`tel:${pet.contact}`" class="link link-hover">{{pet.contact}}</a>
-          <a v-else-if="isLink(pet.contact)" :href="pet.contact" target="_blank" class="text-nowrap">{{ pet.contact }}</a>
-          <span v-else>{{ pet.contact }}</span>
+          <span>{{ pet.contact }}</span>
         </div>
         <div v-if="!pet.alive" class="badge badge-neutral">Fallecido</div>
       </div>
@@ -53,28 +76,3 @@
   </div>
 </template>
 
-<script setup>
-import { MapPinIcon, CalendarIcon, HomeIcon, UserIcon, ArrowRight, EyeOffIcon } from 'lucide-vue-next'
-import {formatDate} from '@/utils/index.ts'
-import { ref } from 'vue';
-import { defineEmits } from 'vue';
-import ButtonShare from '@/components/ButtonShare.vue';
-// import function to register Swiper custom elements
-import { register } from 'swiper/element/bundle';
-// register Swiper custom elements
-register();
-
-
-const props = defineProps({
-  pet: {
-    type: Object,
-    required: true,
-
-  }
-})
-
-const emit = defineEmits(['updateList']);
-
-const error = ref(false);
-
-</script>

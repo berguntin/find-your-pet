@@ -20,6 +20,7 @@
     "vue-router": "latest"
   },
   "devDependencies": {
+    "@stefanobartoletti/nuxt-social-share": "^1.2.0",
     "daisyui": "^4.12.14"
   }
 }
