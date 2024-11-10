@@ -28,7 +28,7 @@ const pageUrl = `${config.public.baseUrl}${route.fullPath}`
 const shareUrl = computed(() => {
   const { title, text, hashtags, quote } = props.options
   
-  switch (props.network.toLowerCase()) {
+  switch (props.network.name.toLowerCase()) {
     case 'facebook':
       // En Facebook se utiliza el parámetro 'u' para la URL que queremos compartir
       return `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(pageUrl)}`

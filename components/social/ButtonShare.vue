@@ -176,7 +176,7 @@ useHead({
                 :key="network.name"
                 :class="['rounded-md py-2 px-4 text-sm', network.color]"
               >
-                <SocialShare :network="network"/>
+                <SocialShare :network="network" :options="options"/>
               </li>
             </ul>
           </div>

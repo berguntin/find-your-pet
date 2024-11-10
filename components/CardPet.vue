@@ -2,7 +2,7 @@
 import { MapPinIcon, CalendarIcon, HomeIcon, UserIcon, ArrowRight, EyeOffIcon } from 'lucide-vue-next'
 import { ref } from 'vue';
 import { defineEmits } from 'vue';
-import ShareButton from '@/components/social/ButtonShare.vue';
+import ButtonShare from '@/components/social/ButtonShare.vue';
 // import function to register Swiper custom elements
 import { register } from 'swiper/element/bundle';
 // register Swiper custom elements
@@ -24,7 +24,7 @@ const error = ref(false);
 </script>
 
 <template>
-  <div class="card bg-base-100 shadow-xl">
+  <div class="card bg-base-100 shadow-xl overflow-hidden">
     <figure class="relative h-[300px]">
       <swiper-container class="w-full h-[300px]" pagination="true">
         <swiper-slide v-for="(image, index) in pet.images" :key="index">
@@ -58,9 +58,9 @@ const error = ref(false);
         </div>
       </div>
       <div class="flex items-center justify-between mt-2">
-        <div class="flex items-center">
+        <div class="flex items-center overflow-hidden">
           <UserIcon class="w-4 h-4 mr-1" />
-          <span>{{ pet.contact }}</span>
+          <span class="truncate">{{ pet.contact }}</span>
         </div>
         <div v-if="!pet.alive" class="badge badge-neutral">Fallecido</div>
       </div>
