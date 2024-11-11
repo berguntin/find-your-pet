@@ -1,9 +1,5 @@
 <script setup lang="ts">
-import ButtonShare from '@/components/social/ButtonShare.vue'
-import { register } from 'swiper/element/bundle';
-import { MapPinIcon, CalendarIcon } from 'lucide-vue-next'
-
-register();
+import ButtonShare from "@/components/social/ButtonShare.vue";
 
 const route = useRoute();
 
@@ -29,11 +25,15 @@ const getImages = computed(() => {
       <!-- Photo Slider -->
       <div class="md:w-1/2 mb-6 md:mb-0 h-full">
         <div class="relative rounded-lg overflow-hidden">
-          <swiper-container pagination="true" scrollbar="true">
-            <swiper-slide v-for="(photo, index) in getImages" :key="index">
-              <img :src="photo" :alt="`imagen de ${pet.name || 'la mascota'}`" class="m-auto">
-            </swiper-slide>
-          </swiper-container>
+          <Swiper>
+            <SwiperSlide v-for="(photo, index) in getImages" :key="photo">
+              <img
+                :src="photo"
+                :alt="`imagen de ${pet.name || 'la mascota'}`"
+                class="m-auto"
+              />
+            </SwiperSlide>
+          </Swiper>
         </div>
       </div>
       <!-- Pet Information Card -->
@@ -41,51 +41,65 @@ const getImages = computed(() => {
         <div class="bg-base-100 shadow-lg rounded-lg overflow-hidden">
           <div class="p-4">
             <div class="flex justify-between items-center my-4" v-if="pet.name">
-              <h1 class="text-3xl font-bold text-base-content">{{ pet.name }}</h1>
+              <h1 class="text-3xl font-bold text-base-content">
+                {{ pet.name }}
+              </h1>
             </div>
             <div class="flex flex-row justify-between my-1">
               <div class="flex items-center">
-                <MapPinIcon class="w-4 h-4 mr-1 text-base-content" />
+                <Icon name="bxs:map" />
                 <span class="text-base-content/70">{{ pet.location }}</span>
               </div>
               <div class="flex items-center">
-                <CalendarIcon class="w-4 h-4 mr-1 text-base-content" />
-                <span class="text-base-content/70">{{ formatDate(pet.date) }}</span>
+                <Icon name="mdi-light:calendar" />
+                <span class="text-base-content/70">{{
+                  formatDate(pet.date)
+                }}</span>
               </div>
             </div>
-            
-            <div class="flex justify-start gap-3 align-middle mb-4" v-if="pet.status === 'found'">
-              <span v-if="pet.athome" class="badge badge-accent badge-lg p-4">Reunido con su familia!!</span>
-              <span v-else 
+
+            <div class="flex justify-start gap-3 align-middle mb-4">
+              <span v-if="pet.athome" class="badge badge-accent badge-lg p-4"
+                >Reunido con su familia!! {{ pet.status }}</span
+              >
+              <span
+                v-else
                 :class="[
                   'px-3 py-1 badge font-semibold',
-                  pet.status === 'lost' ? 'badge-error' : 'badge-warning'
+                  pet.status === 'lost' ? 'badge-error' : 'badge-warning',
                 ]"
               >
-                {{ pet.status === 'lost' ? 'Me buscan' : 'Encontrado' }}
+                {{ pet.status === "lost" ? "Me buscan" : "Encontrado" }}
               </span>
-              <span 
+              <span
                 :class="[
                   'px-3 py-1 badge font-semibold mr-2',
-                  pet.alive ? 'badge-success' : 'badge-error'
+                  pet.alive ? 'badge-success' : 'badge-error',
                 ]"
               >
-                {{ pet.alive ? 'Vivo' : 'Fallecido' }}
+                {{ pet.alive ? "Vivo" : "Fallecido" }}
               </span>
             </div>
             <p class="text-base-content/80 my-4">{{ pet.description }}</p>
             <div class="mb-4">
-              <h2 class="text-md font-semibold text-base-content mb-2">Contacto:</h2>
+              <h2 class="text-md font-semibold text-base-content mb-2">
+                Contacto:
+              </h2>
               <p class="text-base-content/70">{{ pet.contact }}</p>
             </div>
             <div class="flex justify-between align-middle mt-4 gap-1">
               <div v-if="pet.alive && !pet.athome">
-                <button :class="['btn w-100 m-auto', error ? 'btn-warning' : 'btn-primary']" 
-                        @click="confirmSetAtHome" :disabled="isLoading">
-                  {{error ? error : 'Marcar como "en casa"'}}
+                <button
+                  :class="[
+                    'btn w-100 m-auto',
+                    error ? 'btn-warning' : 'btn-primary',
+                  ]"
+                  @click=""
+                >
+                  {{ error ? error : 'Marcar como "en casa"' }}
                 </button>
               </div>
-              <ButtonShare :pet="pet" :onlyIcon="false"/>
+              <ButtonShare :pet="pet" :onlyIcon="false" />
             </div>
           </div>
         </div>

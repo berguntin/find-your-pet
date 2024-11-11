@@ -3,9 +3,9 @@ const emit = defineEmits<{
   (e: "search", data: String): void;
 }>();
 
-const emitSearch = (search) => {
-  emit('search', search)
-} 
+const emitSearch = (search: string) => {
+  emit("search", search);
+};
 </script>
 
 <template>
@@ -15,11 +15,11 @@ const emitSearch = (search) => {
       class="max-w-md mx-auto mt-3 text-base-content sm:text-lg md:mt-5 md:text-xl md:max-w-2xl"
     >
       A causa de las inundaciones provocadas en Valencia por la DANA, muchas
-      mascotas están perdidas, lejos de su familia. <br>
+      mascotas están perdidas, lejos de su familia. <br />
       Necesitamos <strong>tu ayuda</strong>
       para que puedan regresar a sus hogares.
     </p>
 
-    <AppSearch @update-query="emitSearch"/>
+    <AppSearch @update-query="emitSearch" />
   </div>
 </template>
