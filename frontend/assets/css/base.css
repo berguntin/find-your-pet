@@ -1,0 +1,15 @@
+@layer base {
+  body {
+    font-family: Nunito, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI,
+      Roboto, Helvetica Neue, Arial, Noto Sans, sans-serif, Apple Color Emoji,
+      Segoe UI Emoji, Segoe UI Symbol, Noto Color Emoji;
+  }
+
+  h1 {
+    @apply text-3xl font-extrabold  sm:text-4xl md:text-5xl;
+  }
+
+  .container {
+    @apply p-3;
+  }
+}
