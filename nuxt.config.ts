@@ -3,9 +3,9 @@ export default defineNuxtConfig({
   compatibilityDate: "2024-04-03",
   devtools: { enabled: true },
   devServer: {
-    port: 8000
+    port: 8000,
   },
-  modules: ["@nuxtjs/tailwindcss", "@nuxt/icon"],
+  modules: ["@nuxtjs/tailwindcss", "@nuxt/icon", "nuxt-swiper"],
   app: {
     head: {
       title: "Dana Dogs",
@@ -25,9 +25,9 @@ export default defineNuxtConfig({
     dirs: ["types"],
   },
   runtimeConfig: {
-    apiBase: process.env.API_URL,
+    apiBase: "https://api.mascotasdana.es/api",
     public: {
-      baseUrl: process.env.BASE_URL
-    }
+      baseUrl: "https://mascotasdana.es",
+    },
   },
 });
