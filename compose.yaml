@@ -18,7 +18,7 @@ services:
       context: frontend
       target: development
     ports:
-      - 127.0.0.1:5173:5173
+      - 127.0.0.1:8000:8000
     volumes:
       - ./frontend:/app
       # todo node_modules should be created with current user and group id, not root
