@@ -9,10 +9,10 @@ const emitSearch = (search: string) => {
 </script>
 
 <template>
-  <div class="text-center p-5 bg-base-300">
-    <h1>Mascotas perdidas - Valencia</h1>
+  <div class="text-center p-5 bg-base-100">
+    <h1 class="text-md text-secondary">Mascotas perdidas - Valencia</h1>
     <p
-      class="max-w-md mx-auto mt-3 text-base-content sm:text-lg md:mt-5 md:text-xl md:max-w-2xl"
+      class="max-w-md mx-auto mt-3 text-balance text-center text-base-content sm:text-lg md:mt-5 md:text-xl md:max-w-2xl"
     >
       A causa de las inundaciones provocadas en Valencia por la DANA, muchas
       mascotas están perdidas, lejos de su familia. <br />

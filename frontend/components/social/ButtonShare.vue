@@ -1,4 +1,5 @@
 <script setup>
+
 const props = defineProps({
   pet: {
     type: Object,
@@ -71,69 +72,9 @@ const handleEscapeKey = (event) => {
   }
 };
 
-const getTitle = () => {
-  if (props.pet.athome) {
-    return `${props.pet.name || "Esta mascota"} ya está con su familia!`;
-  }
-  return props.pet.status === "lost"
-    ? `Ayúdame a encontrar a ${props.pet.name || "mi mascota"}`
-    : `¿Alguien lo busca?`;
-};
 
-const getText = () => {
-  if (props.pet.athome) {
-    return "Una historia con final feliz";
-  }
-  if (!props.pet.alive) {
-    return `Tristemente, ha sido encontrado fallecido`;
-  }
-  return (
-    props.pet.description || "Mascotas perdidas y encontradas DANA Valencia"
-  );
-};
+const options = useMetadata(props.pet)
 
-const getHastags = () => {
-  let hashtags = [];
-  hashtags.push(props.pet.status == "lost" ? "perdido" : "encontrado");
-  hashtags.push("DANA");
-  hashtags.push("VLC");
-  hashtags.push("ayuda");
-
-  return hashtags.join(",");
-};
-
-const getImage = () => {
-  return props.pet.images[0];
-};
-
-const getUrl = () => {
-  return `${runtimeConfig.public.siteUrl}/mascota/${props.pet.id}`;
-};
-
-const options = {
-  title: getTitle(),
-  text: getText(),
-  hastags: getHastags(),
-  quote: getText(),
-};
-
-useHead({
-  title: getTitle(),
-  meta: [
-    { name: "description", content: getText() },
-    // Open Graph (Facebook, LinkedIn)
-    { property: "og:title", content: getTitle() },
-    { property: "og:description", content: getText() },
-    { property: "og:image", content: getImage() },
-    { property: "og:url", content: getUrl() },
-    { property: "og:type", content: "website" },
-    // Twitter Card
-    { name: "twitter:card", content: "summary_large_image" },
-    { name: "twitter:title", content: getTitle() },
-    { name: "twitter:description", content: getText() },
-    { name: "twitter:image", content: getImage() },
-  ],
-});
 </script>
 
 <template>

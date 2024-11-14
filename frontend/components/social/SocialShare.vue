@@ -5,44 +5,27 @@ const props = defineProps({
     required: true,
   },
   options: {
-    type: Object,
-    default: () => ({
-      title: "¡Mira esto!",
-      hashtags: "",
-      via: "",
-    }),
-    validator: (value) => {
-      Array.from(Object.keys(value)).includes("title", "url", "hastags");
-    },
+    type: Object
   },
 });
 
 const route = useRoute();
 const config = useRuntimeConfig();
 
-const pageUrl = `${config.public.baseUrl}${route.fullPath}`;
 
 const shareUrl = computed(() => {
-  const { title, text, hashtags, quote } = props.options;
+  const { title, text, hashtags, quote, url, via } = props.options;
 
   switch (props.network.name.toLowerCase()) {
     case "facebook":
       // En Facebook se utiliza el parámetro 'u' para la URL que queremos compartir
-      return `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
-        pageUrl
-      )}`;
+      return `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
     case "twitter":
       // En Twitter utilizamos los parámetros 'text', 'url', 'hashtags' y 'via'
-      return `https://twitter.com/intent/tweet?text=${encodeURIComponent(
-        text || title
-      )}&url=${encodeURIComponent(pageUrl)}&hashtags=${encodeURIComponent(
-        hashtags
-      )}&via=${encodeURIComponent(props.options.via || "")}`;
+      return `https://twitter.com/intent/tweet?text=${encodeURIComponent(text || title)}
+                &url=${encodeURIComponent(url)}&hashtags=${encodeURIComponent(hashtags)}&via=${encodeURIComponent(via || "")}`;
     case "whatsapp":
-      // En WhatsApp, utilizamos 'text' para el mensaje completo
-      return `https://wa.me/?text=${encodeURIComponent(
-        `${text || title} ${pageUrl}`
-      )}`;
+      return `https://wa.me/?text=${encodeURIComponent(`${title} ${url}`)}`;
     default:
       return "#";
   }

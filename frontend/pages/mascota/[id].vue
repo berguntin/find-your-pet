@@ -4,14 +4,18 @@ import ButtonShare from "@/components/social/ButtonShare.vue";
 const route = useRoute();
 
 const {
-  data: pet,
+  data,
   status,
   error,
-} = await useLazyFetch<Pet>(`/api/pets/${route.params.id}`);
+} = await useFetch<Pet>(`/api/pets/${route.params.id}`);
 
-const getImages = computed(() => {
-  return JSON.parse(pet.value?.images as string);
-});
+const pet = ref(<Pet>{...data.value, images: JSON.parse(data.value?.images as string) }) 
+
+const metaData = useMetadata(pet.value)
+const config = useRuntimeConfig()
+const openGraph = useOpenGraph(pet.value)
+console.log(openGraph)
+useHead(openGraph);
 </script>
 
 <template>
@@ -26,7 +30,7 @@ const getImages = computed(() => {
       <div class="md:w-1/2 mb-6 md:mb-0 h-full">
         <div class="relative rounded-lg overflow-hidden">
           <Swiper>
-            <SwiperSlide v-for="(photo, index) in getImages" :key="photo">
+            <SwiperSlide v-for="(photo, index) in pet.images" :key="photo">
               <img
                 :src="photo"
                 :alt="`imagen de ${pet.name || 'la mascota'}`"

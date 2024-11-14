@@ -5,7 +5,7 @@ const props = defineProps<{
 </script>
 
 <template>
-  <header class="bg-base-200">
+  <header class="bg-base-50">
     <div class="container mx-auto flex items-center justify-between">
       <div>
         <p class="text-xl md:text-3xl text-primary font-bold;">

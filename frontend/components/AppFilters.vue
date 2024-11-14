@@ -16,7 +16,7 @@ const handleStatus = (status: status) => {
 </script>
 
 <template>
-  <div class="flex items-center justify-between my-8 p-4 bg-base-300">
+  <div class="flex items-center justify-center my-8 p-4 rounded-lg">
     <div role="tablist" class="tabs tabs-boxed">
       <a
         role="tab"
@@ -40,12 +40,12 @@ const handleStatus = (status: status) => {
         >Encontradas</a
       >
     </div>
-    <div>
+    <!-- <div>
       <select class="select select-bordered w-full max-w-xs">
         <option disabled selected>Localidad</option>
         <option>Han Solo</option>
         <option>Greedo</option>
       </select>
-    </div>
+    </div> -->
   </div>
 </template>
