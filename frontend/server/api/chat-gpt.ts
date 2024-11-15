@@ -1,7 +1,11 @@
 import { defineEventHandler, readBody } from "h3";
 import { OpenAI } from "openai";
+import { useRuntimeConfig } from "#imports";
 
 export default defineEventHandler(async (event) => {
+  
+  const config = useRuntimeConfig();
+
   const body = await readBody(event);
   const { type, image } = body;
 
@@ -14,9 +18,9 @@ Reglas:
  - No devuelvas el tipo de animal salvo que no sea perro o gato`;
 
   const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
+    apiKey: config.openAIKey,
   });
-
+ 
   try {
     const stream = await openai.chat.completions.create({
       model: "gpt-4o-mini",

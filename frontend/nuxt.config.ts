@@ -26,6 +26,7 @@ export default defineNuxtConfig({
   },
   runtimeConfig: {
     apiBase: process.env.NUXT_API_URL,
+    openAIKey: process.env.NUXT_OPENAI_KEY,
     public: {
       baseUrl: "https://find-your-pet-five.vercel.app/"//"https://mascotasdana.es",
     },
