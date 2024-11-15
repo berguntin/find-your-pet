@@ -17,6 +17,7 @@
     "lucide-vue-next": "0.456.0",
     "nuxt": "3.14.159",
     "nuxt-swiper": "1.2.2",
+    "openai": "^4.72.0",
     "vue": "latest",
     "vue-router": "latest"
   },
