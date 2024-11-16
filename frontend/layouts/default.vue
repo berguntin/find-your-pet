@@ -6,7 +6,7 @@
 
 <template>
     <TheHeader />
-    <main class="container mx-auto bg-base-100">
+    <main class="container mx-auto bg-base-100 min-h-lvh">
         <slot />
     </main>
     <TheFooter />
