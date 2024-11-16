@@ -7,11 +7,11 @@
 
     const pet = ref(<Pet>{ ...data.value, images: JSON.parse(data.value?.images as string) })
 
-    const metaData = useMetadata(pet.value)
-    const config = useRuntimeConfig()
-    const openGraph = useOpenGraph(pet.value)
-    console.log(openGraph)
-    useHead(openGraph)
+const metaData = useMetadata(pet.value)
+const config = useRuntimeConfig()
+const openGraph = useOpenGraph(pet.value)
+
+useHead(openGraph);
 </script>
 
 <template>
