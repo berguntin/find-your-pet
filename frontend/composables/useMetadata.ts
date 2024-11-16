@@ -15,10 +15,9 @@ export const useMetadata = (pet: Pet | null): Metadata => {
         }
     }
     //
-    const truncateDescription = () :string => {
-
-      return pet.description.length < 150 ? pet.description : `${pet.description.substring(0, 150)}...`
-    } 
+    const truncateDescription = (): string => {
+        return pet.description.length < 150 ? pet.description : `${pet.description.substring(0, 150)}...`
+    }
 
     const getTitle = () => {
         if (pet.athome) {
@@ -46,10 +45,9 @@ export const useMetadata = (pet: Pet | null): Metadata => {
 
         return hashtags.join(',')
     }
-    
-    const getImage = (): String => {
 
-        if(!pet.alive) {
+    const getImage = (): String => {
+        if (!pet.alive) {
             return `${config.public.baseUrl}/images/sensitive_content.webp`
         }
         return pet.images[0]

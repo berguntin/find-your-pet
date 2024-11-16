@@ -22,7 +22,9 @@
             case 'twitter':
                 // En Twitter utilizamos los parámetros 'text', 'url', 'hashtags' y 'via'
                 return `https://twitter.com/intent/tweet?text=${encodeURIComponent(text || title)}
-                &url=${encodeURIComponent(url)}&hashtags=${encodeURIComponent(hashtags)}&via=${encodeURIComponent(via || '')}`
+                &url=${encodeURIComponent(url)}&hashtags=${encodeURIComponent(hashtags)}&via=${encodeURIComponent(
+                    via || ''
+                )}`
             case 'whatsapp':
                 return `https://wa.me/?text=${encodeURIComponent(`${title} ${url}`)}`
             default:

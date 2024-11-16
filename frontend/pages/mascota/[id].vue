@@ -7,11 +7,11 @@
 
     const pet = ref(<Pet>{ ...data.value, images: JSON.parse(data.value?.images as string) })
 
-const metaData = useMetadata(pet.value)
-const config = useRuntimeConfig()
-const openGraph = useOpenGraph(pet.value)
+    const metaData = useMetadata(pet.value)
+    const config = useRuntimeConfig()
+    const openGraph = useOpenGraph(pet.value)
 
-useHead(openGraph);
+    useHead(openGraph)
 </script>
 
 <template>
@@ -65,7 +65,8 @@ useHead(openGraph);
                             >
                                 {{ pet.status === 'lost' ? 'Me buscan' : 'Encontrado' }}
                             </span>
-                            <span v-if="pet.status === 'found'"
+                            <span
+                                v-if="pet.status === 'found'"
                                 :class="[
                                     'px-3 py-1 badge font-semibold mr-2',
                                     pet.alive ? 'badge-success' : 'badge-error'
