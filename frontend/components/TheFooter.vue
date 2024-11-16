@@ -11,7 +11,7 @@
           <a href="https://github.com/berguntin/find-your-pet" target="_blank" rel="noopener noreferrer" aria-label="Ver el repositorio del proyecto en GitHub" class="text-base-content hover:text-primary transition-colors">
             <Icon name="uil:github" size="1.5em" />
           </a>
-          <a href="#" aria-label="Únete a nuestro servidor de Discord" class="text-base-content hover:text-primary transition-colors">
+          <a href="https://discord.gg/gkDyTrZt" target="_blank" aria-label="Únete a nuestro servidor de Discord" class="text-base-content hover:text-primary transition-colors">
             <Icon name="uil:discord" size="1.5em" />
           </a>
         </div>
