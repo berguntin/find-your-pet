@@ -11,8 +11,10 @@
     "reload": "nuxt dev --reload"
   },
   "dependencies": {
+    "@nuxt/content": "^2.13.4",
     "@nuxt/icon": "1.7.0",
     "@nuxtjs/tailwindcss": "6.12.2",
+    "@tailwindcss/typography": "^0.5.15",
     "@vueuse/head": "2.0.0",
     "lucide-vue-next": "0.456.0",
     "nuxt": "3.14.159",

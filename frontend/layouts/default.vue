@@ -9,5 +9,5 @@ const props = defineProps<{
   <main class="container mx-auto bg-base-100">
     <slot />
   </main>
-  <footer></footer>
+  <TheFooter/>
 </template>
