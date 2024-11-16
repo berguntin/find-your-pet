@@ -14,7 +14,7 @@ const pet = ref(<Pet>{...data.value, images: JSON.parse(data.value?.images as st
 const metaData = useMetadata(pet.value)
 const config = useRuntimeConfig()
 const openGraph = useOpenGraph(pet.value)
-console.log(openGraph)
+
 useHead(openGraph);
 </script>
 
