@@ -1,6 +1,7 @@
 import { defineEventHandler, readBody } from "h3";
 import { OpenAI } from "openai";
 import { useRuntimeConfig } from "#imports";
+import { provide } from "vue";
 
 export default defineEventHandler(async (event) => {
   
@@ -18,7 +19,7 @@ Reglas:
  - No devuelvas el tipo de animal salvo que no sea perro o gato`;
 
   const openai = new OpenAI({
-    apiKey: config.openAIKey,
+    apiKey: process.env.NUXT_OPENAI_KEY,
   });
  
   try {
