@@ -1,4 +1,4 @@
 export interface Filters {
-  status?: status;
-  location?: string;
+    status?: status
+    location?: string
 }
