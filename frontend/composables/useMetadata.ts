@@ -46,8 +46,12 @@ export const useMetadata = (pet: Pet | null): Metadata => {
 
         return hashtags.join(',')
     }
-    // TODO fix this
+    
     const getImage = (): String => {
+
+        if(!pet.alive) {
+            return '/content/sensitive_content.webp'
+        }
         return pet.images[0]
     }
 
