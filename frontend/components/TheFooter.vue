@@ -27,7 +27,7 @@
             <a href="/registrar" class="link link-hover">Añadir una mascota</a>
           </li>
           <li>
-            <a href="mailto:mascotasperdidas@gmail.com" class="link link-hover">Contacto</a>
+            <a href="mailto:help.mascotas.perdidas@gmail.com" class="link link-hover">Contacto</a>
           </li>
         </ul>
       </div>
