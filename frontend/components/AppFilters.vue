@@ -16,7 +16,7 @@ const handleStatus = (status: status) => {
 </script>
 
 <template>
-  <div class="flex items-center justify-center my-8 p-4 rounded-lg">
+  <div class="flex items-center justify-center my-1 p-4 rounded-lg">
     <div role="tablist" class="tabs tabs-boxed">
       <a
         role="tab"

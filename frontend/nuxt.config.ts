@@ -5,7 +5,10 @@ export default defineNuxtConfig({
     devServer: {
         port: 8000
     },
-    modules: ['@nuxtjs/tailwindcss', '@nuxt/icon', 'nuxt-swiper'],
+    modules: ['@nuxtjs/tailwindcss', '@nuxt/icon', 'nuxt-swiper', '@nuxt/content'],
+    content: {
+        documentDriven: true
+      },
     app: {
         head: {
             title: 'Dana Dogs',
