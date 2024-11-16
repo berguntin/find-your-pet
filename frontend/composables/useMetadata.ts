@@ -50,7 +50,7 @@ export const useMetadata = (pet: Pet | null): Metadata => {
     const getImage = (): String => {
 
         if(!pet.alive) {
-            return `${config.public.baseUrl}/content/sensitive_content.webp`
+            return `${config.public.baseUrl}/images/sensitive_content.webp`
         }
         return pet.images[0]
     }
