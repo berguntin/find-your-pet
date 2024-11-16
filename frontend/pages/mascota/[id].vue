@@ -71,7 +71,7 @@ useHead(openGraph);
                                     pet.alive ? 'badge-success' : 'badge-error'
                                 ]"
                             >
-                                {{ pet.alive ? 'Vivo' : 'Fallecido' }}
+                                {{ pet.alive && pet.status === 'found' ? 'Vivo' : 'Fallecido' }}
                             </span>
                         </div>
                         <p class="text-base-content/80 my-4">{{ pet.description }}</p>
