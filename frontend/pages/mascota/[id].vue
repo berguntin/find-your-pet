@@ -65,13 +65,13 @@ useHead(openGraph);
                             >
                                 {{ pet.status === 'lost' ? 'Me buscan' : 'Encontrado' }}
                             </span>
-                            <span
+                            <span v-if="pet.status === 'found'"
                                 :class="[
                                     'px-3 py-1 badge font-semibold mr-2',
                                     pet.alive ? 'badge-success' : 'badge-error'
                                 ]"
                             >
-                                {{ pet.alive && pet.status === 'found' ? 'Vivo' : 'Fallecido' }}
+                                {{ pet.alive ? 'Vivo' : 'Fallecido' }}
                             </span>
                         </div>
                         <p class="text-base-content/80 my-4">{{ pet.description }}</p>
