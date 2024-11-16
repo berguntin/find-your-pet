@@ -14,6 +14,12 @@ export const useMetadata = (pet : Pet | null) : Metadata => {
         via: config.public.baseUrl
       }
     }
+    //
+    const truncateDescription = () :string => {
+
+      return pet.description.length < 150 ? pet.description : `${pet.description.substring(0, 150)}...`
+    } 
+
     const getTitle = () => {
       
         if (pet.athome) {
@@ -32,7 +38,7 @@ export const useMetadata = (pet : Pet | null) : Metadata => {
           return `Tristemente, ha sido encontrado fallecido`;
         }
         return (
-          pet.description || "Mascotas perdidas y encontradas DANA Valencia"
+          truncateDescription() || "Mascotas perdidas y encontradas DANA Valencia"
         );
       };
       
