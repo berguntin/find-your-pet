@@ -281,6 +281,8 @@
 
         try {
             const { data, error } = await useFetch<ApiResponse>('/api/pets', config)
+            
+            window.scrollTo(0, 0)
 
             if (error.value) {
                 console.error('Error saving pet:', error.value)
