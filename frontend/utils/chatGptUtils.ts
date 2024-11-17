@@ -1,3 +1,4 @@
+
 export const getChatGPTDescription = async (file: File, type: string) => {
     return new Promise<string>((resolve, reject) => {
         const reader = new FileReader()
@@ -36,7 +37,7 @@ export const getChatGPTDescription = async (file: File, type: string) => {
                 const resizedBase64Image = canvas.toDataURL('image/jpeg', 0.7)
 
                 try {
-                    const { data, error } = await useFetch('/api/chat-gpt', {
+                    const { data, error } = await useFetch<string>('/api/chat-gpt', {
                         timeout: 10000, //  Wait max 10 secs
                         method: 'POST',
                         body: JSON.stringify({ type, image: resizedBase64Image })
@@ -46,7 +47,8 @@ export const getChatGPTDescription = async (file: File, type: string) => {
                         console.error('Error fetching description:', error.value)
                         reject(error.value)
                     } else {
-                        resolve(data.value?.description ?? '')
+                        
+                        resolve(data.value ?? "{}" )
                     }
                 } catch (error) {
                     console.error('Error fetching description:', error)

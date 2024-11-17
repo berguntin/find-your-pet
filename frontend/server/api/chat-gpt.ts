@@ -9,13 +9,26 @@ export default defineEventHandler(async event => {
     const body = await readBody(event)
     const { type, image } = body
 
-    const userPrompt = `Describe un animal (Perro|Gato|Otro) de tipo: ${type} basándote en la siguiente imagen. 
-Reglas:
- - Dame solo datos que ves claramente en la imagen: Raza, color o tamaño.
- - No proporciones información de cosas de la imagen que no tengan que ver con ese animal en concreto. Es decir nada de información de cosas como el entorno o de como suele ser la raza
- - Dame la información de forma resumida y sencilla, ya que necesitamos una clasificación clara de los rasgos principales de ese animal
- - Limitate solametente a dar la respuesta. Si no puedes responder, devuelve una respuesta vacia
- - No devuelvas el tipo de animal salvo que no sea perro o gato`
+    const userPrompt = `I need you to act as a REST API, so I need a JSON response only. Avoid the markup format to style json, only a plain JSON response.
+                        In other case, the app will crash.
+                        Describe the animal in the following image. Extract as much information as you can. 
+                        This is the response schema I am expecting:
+                        {
+                            error: boolean // if the image didnt contain a pet
+                            data : {
+                                type: string | null ('Perro' | 'Gato' | 'Otro') //only this values are allowed (Capitalized)
+                                description: string | null //(Short text describing the animal, in SPANISH)
+                                name: string | null // if known
+                                location: string | null // usually a city name
+                                contact: string | null // phone number, email, social media profile, etc... (only the value, not the contact type)
+                                date: datetime(yyyy-mm-dd) | null // the moment pet was found or lost
+                            }
+                        }
+                        Put only the info you can extract to the image, if you dont find texts, only describe the pet using "description". 
+                        Use a objective description of the pet itself, don't analyse gestures or pets attitude. The description has to be usefull to identify the pet.
+                        Return the plain json. I need to parse it directly to the frontend
+                        If you found that the image not contain a pet, set the error field to true.
+                        `
 
     const openai = new OpenAI({
         apiKey: process.env.NUXT_OPENAI_KEY
@@ -41,8 +54,8 @@ Reglas:
         for await (const chunk of stream) {
             response += chunk.choices[0]?.delta?.content || ''
         }
-        console.log('ChatGPT response:', response)
-        return { description: response }
+       
+        return response
     } catch (error) {
         console.error('Error fetching description from ChatGPT:', error)
         throw new Error('Failed to fetch description from ChatGPT')
