@@ -167,6 +167,7 @@
 
     const maxDate = computed(() => new Date().toISOString().split('T')[0])
     let chatGptStatus = ref('NOT_DONE')
+    const gtpError = ref(false)
 
     const handleImageUpload = async (event: Event) => {
         const target = event.target as HTMLInputElement
@@ -183,8 +184,25 @@
         if (chatGptStatus.value == 'NOT_DONE') {
             chatGptStatus.value = 'LOADING'
             try {
-                const description = await getChatGPTDescription(file, form.value.type ?? 'Otro')
-                form.value.description = description
+                const gptResponse = await getChatGPTDescription(file, form.value.type ?? 'Otro')
+                
+                const data = JSON.parse(gptResponse) 
+                
+                if(data.error) {
+                    console.log('error')
+                    gtpError.value = true
+                } else {
+                    const {data: pet} = data
+                    form.value = {
+                        ...form.value,
+                        description: pet.description,
+                        location: pet.location ?? '',
+                        contact: pet.contact ?? '',
+                        date: pet.date ?? '',
+                        name: pet.name ?? ''
+                    }
+                }
+                
                 chatGptStatus.value = 'FINISH'
             } catch (error) {
                 chatGptStatus.value = 'NOT_DONE'
