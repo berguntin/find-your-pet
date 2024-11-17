@@ -39,97 +39,114 @@
                             class="file-input file-input-bordered w-full"
                         />
                     </div>
-
-                    <div class="form-control">
-                        <label class="label" for="name">
-                            <span class="label-text">Nombre (Si se conoce)</span>
-                        </label>
-                        <input v-model="form.name" type="text" id="name" class="input input-bordered" />
-                    </div>
-
-                    <div class="form-control">
-                        <label class="label" for="description">
-                            <span class="label-text">Descripción</span>
-                        </label>
-                        <div v-if="chatGptStatus === 'LOADING'" class="flex justify-center items-center">
-                            <div class="loader"></div>
+                    <button class="btn btn-secondary mt-2" 
+                            :disabled="form.images.length < 0 && !gptLoading"
+                            type="button"
+                            v-if="!showAllForm"
+                            @click="showAllForm = true"
+                            >
+                            <span v-if="!gptLoading">
+                                Continuar <Icon name="mdi:arrow-right"/>
+                            </span>
+                            <div v-else class="flex justify-center items-center">
+                                <span class="loading loading-spinner"></span>
+                                Analizando imagen...
+                            </div>
+                    </button>
+                    <div v-if="showAllForm">
+                        <div v-if="gtpError" role="alert" :class="`alert alert-error`">
+                            <Icon  name="heroicons:exclamation-triangle-20-solid" class="w-6 h-6" />
+                            <span>No se ha detectado correctamente la mascota en la imagen. Considere utilizar una imagen de mayor calidad</span>
                         </div>
-                        <textarea
-                            v-else
-                            v-model="form.description"
-                            id="description"
-                            required
-                            class="textarea textarea-bordered w-full"
-                        ></textarea>
-                    </div>
-
-                    <div class="form-control">
-                        <label class="label" for="date">
-                            <span class="label-text">Fecha</span>
-                        </label>
-                        <input
-                            v-model="form.date"
-                            type="date"
-                            id="date"
-                            :max="maxDate"
-                            required
-                            class="input input-bordered"
-                        />
-                    </div>
-
-                    <div class="form-control">
-                        <label class="label" for="location">
-                            <span class="label-text">Ubicación (Nombre de población)</span>
-                        </label>
-                        <input
-                            v-model="form.location"
-                            type="text"
-                            id="location"
-                            required
-                            class="input input-bordered"
-                        />
-                    </div>
-
-                    <div v-if="form.status === 'found'" class="form-control">
-                        <span class="label-text">¿Está vivo?</span>
-                        <div class="flex flex-row gap-2">
-                            <label class="label justify-start gap-2">
-                                <span class="label-text">Si</span>
-                                <input
-                                    v-model="form.alive"
-                                    name="alive"
-                                    type="radio"
-                                    id="alive-yes"
-                                    :value="true"
-                                    class="radio radio-primary"
-                                />
+                        <div class="form-control">
+                            <label class="label" for="name">
+                                <span class="label-text">Nombre (Si se conoce)</span>
                             </label>
-                            <label class="label justify-start gap-2">
-                                <span class="label-text">No</span>
-                                <input
-                                    v-model="form.alive"
-                                    name="alive"
-                                    type="radio"
-                                    id="alive-no"
-                                    :value="false"
-                                    class="radio radio-primary"
-                                />
+                            <input v-model="form.name" type="text" id="name" class="input input-bordered" />
+                        </div>
+
+                        <div class="form-control">
+                            <label class="label" for="description">
+                                <span class="label-text">Descripción</span>
                             </label>
+                           
+                            <textarea
+                                v-model="form.description"
+                                id="description"
+                                required
+                                class="textarea textarea-bordered w-full"
+                            ></textarea>
+                        </div>
+
+                        <div class="form-control">
+                            <label class="label" for="date">
+                                <span class="label-text">Fecha</span>
+                            </label>
+                            <input
+                                v-model="form.date"
+                                type="date"
+                                id="date"
+                                :max="maxDate"
+                                required
+                                class="input input-bordered"
+                            />
+                        </div>
+
+                        <div class="form-control">
+                            <label class="label" for="location">
+                                <span class="label-text">Ubicación (Nombre de población)</span>
+                            </label>
+                            <input
+                                v-model="form.location"
+                                type="text"
+                                id="location"
+                                required
+                                class="input input-bordered"
+                            />
+                        </div>
+
+                        <div v-if="form.status === 'found'" class="form-control">
+                            <span class="label-text">¿Está vivo?</span>
+                            <div class="flex flex-row gap-2">
+                                <label class="label justify-start gap-2">
+                                    <span class="label-text">Si</span>
+                                    <input
+                                        v-model="form.alive"
+                                        name="alive"
+                                        type="radio"
+                                        id="alive-yes"
+                                        :value="true"
+                                        class="radio radio-primary"
+                                    />
+                                </label>
+                                <label class="label justify-start gap-2">
+                                    <span class="label-text">No</span>
+                                    <input
+                                        v-model="form.alive"
+                                        name="alive"
+                                        type="radio"
+                                        id="alive-no"
+                                        :value="false"
+                                        class="radio radio-primary"
+                                    />
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="form-control">
+                            <label class="label" for="contact">
+                                <span class="label-text">Contacto (teléfono, email, instagram, etc..)</span>
+                            </label>
+                            <input v-model="form.contact" type="text" id="contact" required class="input input-bordered" />
+                        </div>
+                        <div class="form-control mt-6">
+                            <button type="submit" class="btn btn-primary text-gray-50" :disabled="isSubmitting">
+                                {{ isSubmitting ? 'Registrando...' : 'Registrar Mascota' }}
+                            </button>
                         </div>
                     </div>
-
-                    <div class="form-control">
-                        <label class="label" for="contact">
-                            <span class="label-text">Contacto (teléfono, email, instagram, etc..)</span>
-                        </label>
-                        <input v-model="form.contact" type="text" id="contact" required class="input input-bordered" />
-                    </div>
-
-                    <div class="form-control mt-6">
-                        <button type="submit" class="btn btn-primary text-gray-50" :disabled="isSubmitting">
-                            {{ isSubmitting ? 'Registrando...' : 'Registrar Mascota' }}
-                        </button>
-                    </div>
+                    
+                    
                 </form>
             </div>
             <AlertComponent v-else :alertType="alert.type" :message="alert.message" />
@@ -164,9 +181,9 @@
     })
 
     const alert = ref<Alert | null>(null)
-
+    const showAllForm = ref(false)
     const maxDate = computed(() => new Date().toISOString().split('T')[0])
-    let chatGptStatus = ref('NOT_DONE')
+    const gptLoading = ref(false)
     const gtpError = ref(false)
 
     const handleImageUpload = async (event: Event) => {
@@ -181,17 +198,19 @@
 
     const chatGpt = async (file: File) => {
         // Chat GPT
-        if (chatGptStatus.value == 'NOT_DONE') {
-            chatGptStatus.value = 'LOADING'
+        if (!gptLoading.value) {
+            gptLoading.value = true
             try {
                 const gptResponse = await getChatGPTDescription(file, form.value.type ?? 'Otro')
                 
                 const data = JSON.parse(gptResponse) 
                 
                 if(data.error) {
-                    console.log('error')
+                
                     gtpError.value = true
+
                 } else {
+
                     const {data: pet} = data
                     form.value = {
                         ...form.value,
@@ -201,11 +220,15 @@
                         date: pet.date ?? '',
                         name: pet.name ?? ''
                     }
+                    showAllForm.value = true
+                    gtpError.value = false
                 }
                 
-                chatGptStatus.value = 'FINISH'
+                gptLoading.value = false
+                
             } catch (error) {
-                chatGptStatus.value = 'NOT_DONE'
+                gptLoading.value = false
+                gtpError.value = true
                 console.error('Error fetching description:', error)
             }
         }
