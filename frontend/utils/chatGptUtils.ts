@@ -1,4 +1,3 @@
-import type { GptResponse } from "~/types/GptResponse"
 
 export const getChatGPTDescription = async (file: File, type: string) => {
     return new Promise<string>((resolve, reject) => {
