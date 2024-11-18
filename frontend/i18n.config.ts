@@ -1,6 +1,6 @@
 export default defineI18nConfig(() => ({
     legacy: false,
-    locale: 'es',
+    locale: 'en', // TODO cambiar a es
 
     messages: {
         es: {
@@ -18,7 +18,15 @@ export default defineI18nConfig(() => ({
             search: 'Buscar',
             all: 'Todos',
             lost_f: 'Perdidas',
-            found_f: 'Encontradas'
+            found_f: 'Encontradas',
+            searching_me: 'Me buscan',
+            found_me: 'Encontrado',
+            sensible_content: 'Contenido sensible',
+            reunited_with_his_family: 'Reunido con su familia!!',
+            deceased: 'Fallecido',
+            view_details: 'Ver detalles',
+            back_to_list: 'Volver al listado',
+            error_try_later: 'Ups hubo un error intente más tarde.'
         },
         en: {
             welcome: 'Welcome',
@@ -34,7 +42,15 @@ export default defineI18nConfig(() => ({
             search: 'Search',
             all: 'All',
             lost_f: 'Lost',
-            found_f: 'Found'
+            found_f: 'Found',
+            searching_me: 'Searching me',
+            found_me: 'Found me',
+            sensible_content: 'Sensitive content',
+            reunited_with_his_family: 'Reunited with his family!!',
+            deceased: 'Deceased',
+            view_details: 'View details',
+            back_to_list: 'Back to list',
+            error_try_later: 'Ups there was an error try later.'
         }
     }
 }))
