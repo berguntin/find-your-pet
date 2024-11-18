@@ -5,7 +5,7 @@ export default defineNuxtConfig({
     devServer: {
         port: 8000
     },
-    modules: ['@nuxtjs/tailwindcss', '@nuxt/icon', 'nuxt-swiper', '@nuxt/content'],
+    modules: ['@nuxtjs/tailwindcss', '@nuxt/icon', 'nuxt-swiper', '@nuxt/content', '@nuxtjs/i18n'],
     content: {
         documentDriven: true
     },
@@ -15,6 +15,9 @@ export default defineNuxtConfig({
             meta: [{ charset: 'utf-8' }, { name: 'viewport', content: 'width=device-width, initial-scale=1' }],
             link: [{ rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' }]
         }
+    },
+    i18n: {
+        vueI18n: './i18n.config.ts'
     },
     tailwindcss: {
         cssPath: '~/assets/css/app.css'
