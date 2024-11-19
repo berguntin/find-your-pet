@@ -9,19 +9,25 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 3000;
 
-app.use(cors({
-  origin: (origin, callback) => {
-    //accept all origins in dev environment  
-    if(process.env.ENVIRONMENT === 'development'){
-      return callback(null, true)
-    } 
-    if (!origin || ACCEPTED_ORIGINS.includes(origin)) {
-      return callback(null, true);
+if(process.env.ENVIRONMENT === 'development'){
+  
+  app.use(cors({origin: '*'}))
+
+} else {
+
+  app.use(cors({
+    origin: (origin, callback) => {
+     
+      
+      if (!origin || ACCEPTED_ORIGINS.includes(origin)) {
+        return callback(null, true);
+      }
+      
+      return callback(null, false);
     }
-    
-    return callback(null, false);
-  }
-}));
+  }));
+}
+
 
 app.use(express.json());
 
