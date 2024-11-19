@@ -11,7 +11,10 @@ const port = process.env.PORT || 3000;
 
 app.use(cors({
   origin: (origin, callback) => {
-        
+    //accept all origins in dev environment  
+    if(process.env.ENVIRONMENT === 'development'){
+      return callback(null, true)
+    } 
     if (!origin || ACCEPTED_ORIGINS.includes(origin)) {
       return callback(null, true);
     }
