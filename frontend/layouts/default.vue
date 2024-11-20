@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { SpeedInsights } from "@vercel/speed-insights/nuxt"
 
-    const props = defineProps<{
-        modelValue?: boolean
-    }>()
+const props = defineProps<{
+    modelValue?: boolean
+}>()
 </script>
 
 <template>
