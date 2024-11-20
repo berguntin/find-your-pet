@@ -1,10 +1,13 @@
 <script setup lang="ts">
-    const props = defineProps<{
-        modelValue?: boolean
-    }>()
+import { SpeedInsights } from "@vercel/speed-insights/nuxt"
+
+const props = defineProps<{
+    modelValue?: boolean
+}>()
 </script>
 
 <template>
+    <SpeedInsights/>
     <TheHeader />
     <main class="container mx-auto bg-base-100 min-h-lvh">
         <slot />
