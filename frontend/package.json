@@ -16,6 +16,8 @@
         "@nuxt/icon": "1.7.0",
         "@nuxtjs/tailwindcss": "6.12.2",
         "@tailwindcss/typography": "^0.5.15",
+        "@vercel/analytics": "^1.4.1",
+        "@vercel/speed-insights": "^1.1.0",
         "@vueuse/head": "2.0.0",
         "lucide-vue-next": "0.456.0",
         "nuxt": "3.14.159",
@@ -25,7 +27,7 @@
         "vue-router": "latest"
     },
     "devDependencies": {
-        "prettier": "^2.0.0",
-        "daisyui": "^4.12.14"
+        "daisyui": "^4.12.14",
+        "prettier": "^2.0.0"
     }
 }
