@@ -6,7 +6,7 @@
             <Icon v-else name="heroicons:exclamation-triangle-20-solid" class="w-6 h-6" />
             <span>{{ message }}</span>
         </div>
-        <NuxtLink to="/" class="btn btn-secondary">Volver al listado</NuxtLink>
+        <NuxtLink to="/" class="btn btn-secondary">{{ $t('back_to_list') }}</NuxtLink>
     </div>
 </template>
 

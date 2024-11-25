@@ -18,14 +18,18 @@
 <template>
     <div class="flex items-center justify-center my-1 p-4 rounded-lg">
         <div role="tablist" class="tabs tabs-boxed">
-            <a role="tab" :class="{ 'tab-active': actualStatus === 'all' }" class="tab" @click="handleStatus('all')"
-                >Todos</a
-            >
-            <a role="tab" :class="{ 'tab-active': actualStatus === 'lost' }" class="tab" @click="handleStatus('lost')"
-                >Perdidas</a
-            >
-            <a role="tab" :class="{ 'tab-active': actualStatus === 'found' }" @click="handleStatus('found')" class="tab"
-                >Encontradas</a
+            <a role="tab" :class="{ 'tab-active': actualStatus === 'all' }" class="tab" @click="handleStatus('all')">{{
+                $t('all')
+            }}</a>
+            <a role="tab" :class="{ 'tab-active': actualStatus === 'lost' }" class="tab" @click="handleStatus('lost')">
+                {{ $t('lost_f') }}
+            </a>
+            <a
+                role="tab"
+                :class="{ 'tab-active': actualStatus === 'found' }"
+                @click="handleStatus('found')"
+                class="tab"
+                >{{ $t('found_f') }}</a
             >
         </div>
         <!-- <div>

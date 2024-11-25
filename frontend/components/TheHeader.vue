@@ -9,10 +9,10 @@
         <div class="container mx-auto flex items-center justify-between">
             <div>
                 <p class="text-xl md:text-3xl text-primary font-bold;">
-                    <NuxtLink to="/">MASCOTAS DANA</NuxtLink>
+                    <NuxtLink to="/">{{ $t('header_title') }}</NuxtLink>
                 </p>
 
-                <p>Mascotas Perdidas y Encontradas en Valencia</p>
+                <p>{{ $t('header_desc') }}</p>
             </div>
             <TheNavBar />
         </div>

@@ -1,33 +1,33 @@
 <template>
     <div class="min-h-screen rounded-sm bg-base-50 p-4 mb-5">
         <div class="max-w-md mx-auto">
-            <h1 class="text-4xl font-bold text-center mb-8">Registrar Mascota</h1>
+            <h1 class="text-4xl font-bold text-center mb-8">{{ $t('register_pet') }}</h1>
             <div v-if="!alert" class="card bg-base-150 shadow-xl">
                 <form @submit.prevent="submitForm" class="card-body">
                     <div class="form-control">
                         <label class="label" for="status">
-                            <span class="label-text">Situación</span>
+                            <span class="label-text">{{ $t('situation') }}</span>
                         </label>
                         <select v-model="form.status" id="status" required class="select select-bordered w-full">
-                            <option value="lost">He perdido</option>
-                            <option value="found">He encontrado</option>
+                            <option value="lost">{{ $t('i_lost') }}</option>
+                            <option value="found">{{ $t('i_found') }}</option>
                         </select>
                     </div>
 
                     <div class="form-control">
                         <label class="label" for="type">
-                            <span class="label-text">Tipo</span>
+                            <span class="label-text"> {{ $t('type') }}</span>
                         </label>
                         <select v-model="form.type" id="type" class="select select-bordered w-full">
-                            <option value="Perro">Perro</option>
-                            <option value="Gato">Gato</option>
-                            <option value="Otro">Otro</option>
+                            <option value="Perro">{{ $t('dog') }}</option>
+                            <option value="Gato">{{ $t('cat') }}</option>
+                            <option value="Otro">{{ $t('other') }}</option>
                         </select>
                     </div>
 
                     <div class="form-control">
                         <label class="label" for="image">
-                            <span class="label-text">Imágenes</span>
+                            <span class="label-text"> {{ $t('images') }}</span>
                         </label>
                         <input
                             type="file"
@@ -39,37 +39,36 @@
                             class="file-input file-input-bordered w-full"
                         />
                     </div>
-                    <button class="btn btn-secondary mt-2" 
-                            :disabled="form.images.length < 0 && !gptLoading"
-                            type="button"
-                            v-if="!showAllForm"
-                            @click="showAllForm = true"
-                            >
-                            <span v-if="!gptLoading">
-                                Continuar <Icon name="mdi:arrow-right"/>
-                            </span>
-                            <div v-else class="flex justify-center items-center">
-                                <span class="loading loading-spinner"></span>
-                                Analizando imagen...
-                            </div>
+                    <button
+                        class="btn btn-secondary mt-2"
+                        :disabled="form.images.length < 0 && !gptLoading"
+                        type="button"
+                        v-if="!showAllForm"
+                        @click="showAllForm = true"
+                    >
+                        <span v-if="!gptLoading"> {{ $t('continue') }} <Icon name="mdi:arrow-right" /> </span>
+                        <div v-else class="flex justify-center items-center">
+                            <span class="loading loading-spinner"></span>
+                            {{ $t('analyzing_image') }}
+                        </div>
                     </button>
                     <div v-if="showAllForm">
                         <div v-if="gtpError" role="alert" :class="`alert alert-error`">
-                            <Icon  name="heroicons:exclamation-triangle-20-solid" class="w-6 h-6" />
-                            <span>No se ha detectado correctamente la mascota en la imagen. Considere utilizar una imagen de mayor calidad</span>
+                            <Icon name="heroicons:exclamation-triangle-20-solid" class="w-6 h-6" />
+                            <span>{{ $t('analyzing_image_error') }}</span>
                         </div>
                         <div class="form-control">
                             <label class="label" for="name">
-                                <span class="label-text">Nombre (Si se conoce)</span>
+                                <span class="label-text">{{ $t('name_if_known') }}</span>
                             </label>
                             <input v-model="form.name" type="text" id="name" class="input input-bordered" />
                         </div>
 
                         <div class="form-control">
                             <label class="label" for="description">
-                                <span class="label-text">Descripción</span>
+                                <span class="label-text"> {{ $t('description') }}</span>
                             </label>
-                           
+
                             <textarea
                                 v-model="form.description"
                                 id="description"
@@ -80,7 +79,7 @@
 
                         <div class="form-control">
                             <label class="label" for="date">
-                                <span class="label-text">Fecha</span>
+                                <span class="label-text"> {{ $t('date') }}</span>
                             </label>
                             <input
                                 v-model="form.date"
@@ -94,7 +93,7 @@
 
                         <div class="form-control">
                             <label class="label" for="location">
-                                <span class="label-text">Ubicación (Nombre de población)</span>
+                                <span class="label-text"> {{ $t('ubication_name') }}</span>
                             </label>
                             <input
                                 v-model="form.location"
@@ -106,10 +105,10 @@
                         </div>
 
                         <div v-if="form.status === 'found'" class="form-control">
-                            <span class="label-text">¿Está vivo?</span>
+                            <span class="label-text">{{ $t('its_alive_question') }}</span>
                             <div class="flex flex-row gap-2">
                                 <label class="label justify-start gap-2">
-                                    <span class="label-text">Si</span>
+                                    <span class="label-text">{{ $t('yes') }}</span>
                                     <input
                                         v-model="form.alive"
                                         name="alive"
@@ -120,7 +119,7 @@
                                     />
                                 </label>
                                 <label class="label justify-start gap-2">
-                                    <span class="label-text">No</span>
+                                    <span class="label-text">{{ $t('no') }}</span>
                                     <input
                                         v-model="form.alive"
                                         name="alive"
@@ -135,18 +134,22 @@
 
                         <div class="form-control">
                             <label class="label" for="contact">
-                                <span class="label-text">Contacto (teléfono, email, instagram, etc..)</span>
+                                <span class="label-text">{{ $t('contact') }} {{ $t('contact_examples') }}</span>
                             </label>
-                            <input v-model="form.contact" type="text" id="contact" required class="input input-bordered" />
+                            <input
+                                v-model="form.contact"
+                                type="text"
+                                id="contact"
+                                required
+                                class="input input-bordered"
+                            />
                         </div>
                         <div class="form-control mt-6">
                             <button type="submit" class="btn btn-primary text-gray-50" :disabled="isSubmitting">
-                                {{ isSubmitting ? 'Registrando...' : 'Registrar Mascota' }}
+                                {{ isSubmitting ? $t('registering') : $t('register_pet') }}
                             </button>
                         </div>
                     </div>
-                    
-                    
                 </form>
             </div>
             <AlertComponent v-else :alertType="alert.type" :message="alert.message" />
@@ -202,16 +205,13 @@
             gptLoading.value = true
             try {
                 const gptResponse = await getChatGPTDescription(file, form.value.type ?? 'Otro')
-                
-                const data = JSON.parse(gptResponse) 
-                
-                if(data.error) {
-                
+
+                const data = JSON.parse(gptResponse)
+
+                if (data.error) {
                     gtpError.value = true
-
                 } else {
-
-                    const {data: pet} = data
+                    const { data: pet } = data
                     form.value = {
                         ...form.value,
                         description: pet.description,
@@ -223,9 +223,8 @@
                     showAllForm.value = true
                     gtpError.value = false
                 }
-                
+
                 gptLoading.value = false
-                
             } catch (error) {
                 gptLoading.value = false
                 gtpError.value = true
@@ -281,7 +280,7 @@
 
         try {
             const { data, error } = await useFetch<ApiResponse>('/api/pets', config)
-            
+
             window.scrollTo(0, 0)
 
             if (error.value) {
