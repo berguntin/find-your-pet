@@ -7,7 +7,7 @@
 </script>
 
 <template>
-    <div class="card bg-base-100 shadow-xl overflow-hidden border-slate-200/80 border">
+    <div class="card bg-base-100 shadow-xl overflow-hidden border-slate-200/80 border [content-visibility:auto]">
         <figure class="relative h-[300px]">
             <Swiper class="w-full h-[300px]" :loop="true">
                 <SwiperSlide v-for="(image, index) in pet.images" :key="pet.id">
