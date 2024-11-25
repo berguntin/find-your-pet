@@ -16,8 +16,8 @@
 </script>
 
 <template>
-    <div class="flex items-center justify-center my-1 p-4 rounded-lg">
-        <div role="tablist" class="tabs tabs-boxed">
+    <div>
+        <div role="tablist" class="tabs tabs-boxed bg-primary/10 font-medium border-primary/15 border">
             <a role="tab" :class="{ 'tab-active': actualStatus === 'all' }" class="tab" @click="handleStatus('all')"
                 >Todos</a
             >
