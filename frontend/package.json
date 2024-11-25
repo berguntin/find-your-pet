@@ -17,6 +17,8 @@
         "@nuxtjs/i18n": "^9.0.0-rc.2",
         "@nuxtjs/tailwindcss": "6.12.2",
         "@tailwindcss/typography": "^0.5.15",
+        "@vercel/analytics": "^1.4.1",
+        "@vercel/speed-insights": "^1.1.0",
         "@vueuse/head": "2.0.0",
         "lucide-vue-next": "0.456.0",
         "nuxt": "3.14.159",
