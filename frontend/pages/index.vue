@@ -54,10 +54,7 @@
 
 <template>
     <AppHero @search="handleSearch" />
-    <div class="flex flex-col md:flex-row items-center justify-between gap-2 pt-8 pb-4 sticky top-0 bg-base-100/70 z-20 backdrop-blur">
-        <AppSearch @update-query="emitSearch" />
-        <AppFilters @@set-filter="setFilter" />
-    </div>
+    <AppFilters @@set-filter="setFilter" />
     <AppError v-if="error" class="mx-auto" />
     <ClientOnly>
         <AppLoading v-if="status === 'pending'" class="text-center py-8" />

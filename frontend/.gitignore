@@ -24,4 +24,3 @@ logs
 !.env.example
 
 package-lock.json
-bun.lockb

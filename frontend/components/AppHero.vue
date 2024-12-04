@@ -17,5 +17,7 @@
             Necesitamos <strong>tu ayuda</strong>
             para que puedan regresar a sus hogares.
         </p>
+
+        <AppSearch @update-query="emitSearch" />
     </div>
 </template>

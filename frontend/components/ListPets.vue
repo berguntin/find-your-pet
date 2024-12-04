@@ -5,7 +5,7 @@
 </script>
 
 <template>
-    <div class="mx-auto grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 my-5 p-5">
+    <div class="mx-auto grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 my-5 p-5">
         <template v-for="pet in pets" :key="pet.id">
             <CardPet :pet="pet" />
         </template>
