@@ -2,6 +2,7 @@
     const props = defineProps<{
         modelValue?: boolean
     }>()
+    const { setLocale } = useI18n()
 </script>
 
 <template>
@@ -10,10 +11,18 @@
             <Icon name="material-symbols:close" size="1.5rem" />
         </label>
         <ul class="menu flex-col bg-base-50 lg:flex-row lg:menu-horizontal gap-3">
-            <li><NuxtLink to="/" class="btn btn-ghost" external>Inicio</NuxtLink></li>
+            <li>
+                <NuxtLink to="/" class="btn btn-ghost" external>{{ $t('home') }}</NuxtLink>
+            </li>
+            <li v-if="$i18n.locale !== 'en'">
+                <button @click="setLocale('en')" class="btn btn-ghost">English</button>
+            </li>
+            <li v-if="$i18n.locale !== 'es'">
+                <button @click="setLocale('es')" class="btn btn-ghost">Español</button>
+            </li>
             <li>
                 <NuxtLink to="/registrar" class="btn btn-outline btn-primary btn-md md:btn-xl" external>
-                    + Añadir mascota
+                    {{ $t('add_pet') }}
                 </NuxtLink>
             </li>
         </ul>

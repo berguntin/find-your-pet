@@ -10,12 +10,12 @@
 
 <template>
     <div class="text-center p-5 bg-base-100">
-        <h1 class="text-md text-secondary">Mascotas perdidas - Valencia</h1>
+        <h1 class="text-md text-secondary">{{ $t('mainpage_title') }}</h1>
         <p class="max-w-md mx-auto mt-3 text-balance text-center text-base-content">
-            A causa de las inundaciones provocadas en Valencia por la DANA, muchas mascotas están perdidas, lejos de su
-            familia. <br />
-            Necesitamos <strong>tu ayuda</strong>
-            para que puedan regresar a sus hogares.
+            {{ $t('mainpage_subtitle_1') }}
+            <br />
+            {{ $t('we_need') }} <strong> {{ $t('your_help') }}</strong>
+            {{ $t('mainpage_subtitle_2') }}
         </p>
 
         <AppSearch @update-query="emitSearch" />
