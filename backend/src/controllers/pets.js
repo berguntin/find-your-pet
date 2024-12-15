@@ -1,36 +1,30 @@
-import supabase from '../config/database.js';
-import { v4 as uuidv4 } from 'uuid';
+import db from '../config/database.js';
 import { uploadImages } from '../services/cloudinary.js';
 
 export const getAllPets = async (req, res) => {
+
   try {
-    const { data, error } = await supabase.from('pets').select('*').order('created_at', {ascending: false});
+    const pets = await db`SELECT * FROM pets;`;
     
-    if (error) throw error;
-
-    const pets = data.map(pet => ({
-      ...pet,
-      images: pet.images ? JSON.parse(pet.images) : []
-    }));
-
     res.json(pets);
   } catch (error) {
+    
     res.status(500).json({ message: error.message });
   }
 };
 
 export const getPetById = async (req, res) => {
   try {
-    const { data, error } = await supabase.from('pets').select('*').eq('id', req.params.id).single();
-    
-    if (error) {
-      if (error.message.includes('not found')) {
-        return res.status(404).json({ success: false, message: 'Pet not found' });
-      }
-      throw error;
+    const [pet] = await db`
+      SELECT * FROM pets
+      WHERE id = ${req.params.id}
+    `;
+
+    if (!pet) {
+      return res.status(404).json({ success: false, message: 'Pet not found' });
     }
 
-    res.json(data);
+    res.json(pet);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -50,53 +44,42 @@ export const createPet = async (req, res) => {
     } = req.body;
 
     const created_at = new Date();
-    const created_by = 'web'; //TODO add users?
-
+    const created_by = 'web'; // TODO: Add user context
     const cloudinaryResponse = await uploadImages(req.files);
     const uploadedImageJSON = JSON.stringify(cloudinaryResponse);
 
-    const { error } = await supabase.from('pets').insert([{
-      type,
-      images: uploadedImageJSON,
-      description,
-      name,
-      status,
-      location,
-      alive,
-      contact,
-      date,
-      created_by, 
-      created_at
-    }]);
+    await db`
+      INSERT INTO pets (
+        type, to_jsonb(images), description, name, status,
+        location, alive, contact, date, created_by, created_at
+      )
+      VALUES (
+        ${type}, ${uploadedImageJSON}, ${description}, ${name}, ${status},
+        ${location}, ${alive}, ${contact}, ${date}, ${created_by}, ${created_at}
+      )
+    `;
 
-    if (error) throw error;
-
-    res.status(201).json({ success: true, message: 'Pet created successfully' });
-
+    res.status(201).json({ success: true, message: 'Pet created successfully', id });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-
 export const updatePet = async (req, res) => {
   try {
     const { athome } = req.body;
 
-    const { error } = await supabase
-      .from('pets')
-      .update({ athome })
-      .eq('id', req.params.id);
+    const result = await db`
+      UPDATE pets
+      SET athome = ${athome}
+      WHERE id = ${req.params.id}
+    `;
 
-    if (error) {
-      if (error.message.includes('not found')) {
-        return res.status(404).json({ message: 'Pet not found' });
-      }
-      throw error;
+    if (result.count === 0) {
+      return res.status(404).json({ message: 'Pet not found' });
     }
 
     res.json({ success: true, message: 'Pet updated successfully' });
-
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -104,13 +87,13 @@ export const updatePet = async (req, res) => {
 
 export const deletePet = async (req, res) => {
   try {
-    const { error } = await supabase.from('pets').delete().eq('id', req.params.id);
-    
-    if (error) {
-      if (error.message.includes('not found')) {
-        return res.status(404).json({ message: 'Pet not found' });
-      }
-      throw error;
+    const result = await db`
+      DELETE FROM pets
+      WHERE id = ${req.params.id}
+    `;
+
+    if (result.count === 0) {
+      return res.status(404).json({ message: 'Pet not found' });
     }
 
     res.json({ message: 'Pet deleted successfully' });

@@ -1,12 +1,23 @@
-// supabaseClient.js
-import { createClient } from '@supabase/supabase-js';
-import dotenv from 'dotenv';
+import postgres from 'postgres';
 
-dotenv.config();
+const {
+    DB_USER,
+    DB_NAME,
+    DB_PASSWORD,
+    DB_HOST,
+    DB_PORT,
+    ENVIRONMENT
+} = process.env
 
-const supabaseUrl = process.env.SUPABASE_URL; 
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY; 
+const db = postgres({
+    host: DB_HOST,
+    port: DB_PORT,
+    database: DB_NAME,
+    username: DB_USER,
+    password: DB_PASSWORD,
+    ssl: ENVIRONMENT === 'production' // required for supabase conection on prod
+        ? { rejectUnauthorized: false }
+        : false,
+});
 
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-export default supabase;
+export default db;
