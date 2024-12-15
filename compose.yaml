@@ -3,8 +3,10 @@ services:
     build:
       context: backend
       target: development
+    env_file:
+      - ./backend/.env
     ports:
-      - 127.0.0.1:3000:3000
+      - 3000:3000
     volumes:
       - ./backend:/app
     networks:
@@ -18,7 +20,7 @@ services:
       context: frontend
       target: development
     ports:
-      - 127.0.0.1:8000:8000
+      - 8000:8000
     volumes:
       - ./frontend:/app
       # todo node_modules should be created with current user and group id, not root
@@ -29,25 +31,24 @@ services:
 
   db:
     image: postgres
+    env_file:
+      - ./backend/.env
     restart: always
-    secrets:
-      - db-password
     volumes:
-      - ./db/init.d:/docker-entrypoint-initdb.d
+      - ./backend/db/init.d:/docker-entrypoint-initdb.d
       - db-data:/var/lib/postgresql/data
     networks:
       - private
+    ports:
+      - 5432:5432
     environment:
-      - POSTGRES_DB=pets
-      - POSTGRES_PASSWORD_FILE=/run/secrets/db-password
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
 
 volumes:
   db-data:
 
-secrets:
-  db-password:
-    file: db/password.txt
-
 networks:
-  public:
+  public: 
+    driver: bridge
   private:

@@ -21,8 +21,7 @@
     })
 
     const search = ref<String>('')
-    const config = useRuntimeConfig()
-
+   
     const { data: pets, status, error } = await useFetch<Pet[]>(`/api/pets`)
 
     const getPets = computed(() => {
