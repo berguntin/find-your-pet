@@ -54,7 +54,7 @@
 
                         <div class="flex justify-start gap-3 align-middle mb-4">
                             <span v-if="pet.athome" class="badge badge-accent badge-lg p-4"
-                                >Reunido con su familia!! {{ pet.status }}</span
+                                >{{ $t('reunited_with_his_family') }} {{ pet.status }}</span
                             >
                             <span
                                 v-else
@@ -63,7 +63,7 @@
                                     pet.status === 'lost' ? 'badge-error' : 'badge-warning'
                                 ]"
                             >
-                                {{ pet.status === 'lost' ? 'Me buscan' : 'Encontrado' }}
+                                {{ pet.status === 'lost' ? $t('searching_me') : $t('found_me') }}
                             </span>
                             <span
                                 v-if="pet.status === 'found'"
@@ -72,18 +72,18 @@
                                     pet.alive ? 'badge-success' : 'badge-error'
                                 ]"
                             >
-                                {{ pet.alive ? 'Vivo' : 'Fallecido' }}
+                                {{ pet.alive ? $t('alive') : $t('deceased') }}
                             </span>
                         </div>
                         <p class="text-base-content/80 my-4">{{ pet.description }}</p>
                         <div class="mb-4">
-                            <h2 class="text-md font-semibold text-base-content mb-2">Contacto:</h2>
+                            <h2 class="text-md font-semibold text-base-content mb-2">{{ $t('contact') }}:</h2>
                             <p class="text-base-content/70">{{ pet.contact }}</p>
                         </div>
                         <div class="flex justify-between align-middle mt-4 gap-1">
                             <div v-if="pet.alive && !pet.athome">
                                 <button :class="['btn w-100 m-auto', error ? 'btn-warning' : 'btn-primary']" @click="">
-                                    {{ error ? error : 'Marcar como "en casa"' }}
+                                    {{ error ? error : $t('set_as_at_home') }}
                                 </button>
                             </div>
                             <ButtonShare :pet="pet" :onlyIcon="false" />
