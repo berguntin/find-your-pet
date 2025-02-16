@@ -24,13 +24,13 @@
                 <Icon name="el:eye-close" />
                 <span>{{ $t('sensible_content') }}</span>
             </div>
-            <div v-if="pet.athome" class="absolute top-2 left-2 badge badge-primary badge-lg gap-2 p-4 z-2">
+            <div v-if="pet.athome" class="absolute top-2 left-2 badge badge-primary badge-lg gap-2 p-4 z-10">
                 <Icon name="material-symbols:home-outline" />
                 {{ $t('reunited_with_his_family') }}
             </div>
             <div
                 v-if="!pet.athome"
-                class="absolute top-2 right-2 badge badge-lg text-gray-100 z-2"
+                class="absolute top-2 right-2 badge badge-lg text-gray-100 z-10"
                 :class="pet.status === 'lost' ? 'badge-error' : 'badge-warning text-gray-900'"
             >
                 {{ pet.status === 'lost' ? $t('searching_me') : $t('found_me') }}

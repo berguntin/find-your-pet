@@ -23,7 +23,8 @@
     const search = ref<String>('')
    
     const { data: pets, status, error } = await useFetch<Pet[]>(`/api/pets`)
-
+    
+    
     const getPets = computed(() => {
         if (!pets.value) return []
 
