@@ -5,8 +5,9 @@ export const getAllPets = async (req, res) => {
 
   try {
     const pets = await db`SELECT * FROM pets;`;
+    const formattedPets = pets.map(pet => ({...pet, images: JSON.parse(pet.images)}))
     
-    res.json(pets);
+    res.json(formattedPets);
   } catch (error) {
     
     res.status(500).json({ message: error.message });
