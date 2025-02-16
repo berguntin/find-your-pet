@@ -13,7 +13,7 @@
                     ><Icon name="material-symbols:menu" size="1.5rem"
                 /></label>
             </div>
-            <div class="drawer-side z-10">
+            <div class="drawer-side z-20">
                 <label for="my-drawer" aria-label="close sidebar" class="drawer-overlay"></label>
 
                 <TheMenu />
