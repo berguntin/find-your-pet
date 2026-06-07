@@ -7,6 +7,7 @@ const required = [
   'CLOUDINARY_CLOUD_NAME',
   'CLOUDINARY_API_KEY',
   'CLOUDINARY_API_SECRET',
+  'RECAPTCHA_SECRET_KEY',
 ];
 
 export function validateEnv() {

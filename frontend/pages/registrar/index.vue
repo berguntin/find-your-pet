@@ -163,6 +163,8 @@
     import AlertComponent from '~/components/AlertComponent.vue'
     import { getChatGPTDescription } from '~/utils/chatGptUtils'
 
+    const { execute: executeRecaptcha } = useRecaptcha()
+
     interface Alert {
         type: 'error' | 'success'
         message: string
@@ -247,6 +249,9 @@
                 formData.append(key, value.toString())
             }
         })
+
+        const captchaToken = await executeRecaptcha('register_pet')
+        formData.append('captchaToken', captchaToken)
 
         try {
             const response = await savePet(formData)

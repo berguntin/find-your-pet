@@ -28,7 +28,8 @@ export default defineNuxtConfig({
     runtimeConfig: {
         apiBase: process.env.NUXT_API_BASE || 'http://localhost:3000/api/', // en vercel agregar NUXT_API_BASE=https://api.mascotasdana.es/api
         public: {
-            baseUrl: 'http://localhost:8000' // en vercel agregar NUXT_PUBLIC_BASE_URL=https://mascotasdana.es
+            baseUrl: 'http://localhost:8000', // en vercel agregar NUXT_PUBLIC_BASE_URL=https://mascotasdana.es
+            recaptchaSiteKey: process.env.NUXT_PUBLIC_RECAPTCHA_SITE_KEY || ''
         }
     }
 })
