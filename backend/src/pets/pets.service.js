@@ -1,4 +1,5 @@
 import { uploadImages } from '../services/cloudinary.js';
+import { generateImageEmbedding } from '../services/embeddings.js';
 import * as petsRepository from './pets.repository.js';
 import { AppError } from '../middleware/errorHandler.js';
 
@@ -15,7 +16,10 @@ export async function getPetById(id) {
 export async function createPet(fields, files) {
   const { type, description, name, status, location, alive, contact, date } = fields;
 
-  const images = files?.length ? await uploadImages(files) : [];
+  const [images, embedding] = await Promise.all([
+    files?.length ? uploadImages(files) : [],
+    files?.length ? generateImageEmbedding(files[0].buffer).catch(() => null) : null,
+  ]);
 
   return petsRepository.insert({
     type,
@@ -29,7 +33,13 @@ export async function createPet(fields, files) {
     date,
     created_by: 'web',
     created_at: new Date(),
+    embedding,
   });
+}
+
+export async function searchSimilarPets(imageBuffer) {
+  const embedding = await generateImageEmbedding(imageBuffer);
+  return petsRepository.findSimilar(embedding);
 }
 
 export async function updatePetAtHome(id, atHome) {

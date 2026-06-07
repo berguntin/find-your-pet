@@ -30,7 +30,7 @@ services:
       - backend
 
   db:
-    image: postgres
+    image: pgvector/pgvector:pg16
     env_file:
       - ./backend/.env
     restart: always

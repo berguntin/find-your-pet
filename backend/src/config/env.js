@@ -8,6 +8,7 @@ const required = [
   'CLOUDINARY_API_KEY',
   'CLOUDINARY_API_SECRET',
   'RECAPTCHA_SECRET_KEY',
+  'HUGGINGFACE_API_KEY',
 ];
 
 export function validateEnv() {

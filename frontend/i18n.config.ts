@@ -58,7 +58,14 @@ export default defineI18nConfig(() => ({
             no: 'No',
             contact_examples: '(teléfono, email, instagram, etc..)',
             register_pet: 'Registrar mascota',
-            registering: 'Registrando...'
+            registering: 'Registrando...',
+            similar_pets_found: '¡Puede que ya esté registrado!',
+            similar_pets_description: 'Hemos encontrado mascotas similares en nuestra base de datos. Comprueba si ya hay alguien buscando o que haya encontrado a tu mascota antes de publicar.',
+            lost: 'Perdido',
+            found: 'Encontrado',
+            similar: 'similar',
+            searching_similar: 'Buscando mascotas similares...',
+            view_similar_pet: 'Ver ficha'
         },
         en: {
             welcome: 'Welcome',
@@ -114,7 +121,14 @@ export default defineI18nConfig(() => ({
             no: 'No',
             contact_examples: '(phone, email, instagram, etc..)',
             register_pet: 'Register pet',
-            registering: 'Registering...'
+            registering: 'Registering...',
+            similar_pets_found: 'It might already be registered!',
+            similar_pets_description: 'We found similar pets in our database. Check if someone is already looking for or has found your pet before publishing.',
+            lost: 'Lost',
+            found: 'Found',
+            similar: 'match',
+            searching_similar: 'Searching for similar pets...',
+            view_similar_pet: 'View profile'
         }
     }
 }))

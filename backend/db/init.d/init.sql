@@ -1,3 +1,5 @@
+CREATE EXTENSION IF NOT EXISTS vector;
+
 create type pet_type as enum('Perro', 'Gato', 'Otro');
 
 create type pet_status as enum('lost', 'found');
@@ -18,8 +20,11 @@ create table if not exists
     date timestamp with time zone not null,
     atHome boolean default false,
     created_by text not null,
-    created_at timestamp with time zone default current_timestamp
+    created_at timestamp with time zone default current_timestamp,
+    embedding vector(768)
   );
+
+CREATE INDEX ON pets USING hnsw (embedding vector_cosine_ops);
 
 COPY pets
     FROM '/docker-entrypoint-initdb.d/pets.csv'

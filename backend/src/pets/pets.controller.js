@@ -44,3 +44,15 @@ export async function deletePet(req, res, next) {
     next(err);
   }
 }
+
+export async function searchSimilar(req, res, next) {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'Image is required' });
+    }
+    const pets = await petsService.searchSimilarPets(req.file.buffer);
+    res.json(pets);
+  } catch (err) {
+    next(err);
+  }
+}

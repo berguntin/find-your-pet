@@ -144,6 +144,12 @@
                                 class="input input-bordered"
                             />
                         </div>
+                        <div v-if="similarLoading" class="flex items-center gap-2 text-sm text-base-content/60 mt-4">
+                            <span class="loading loading-spinner loading-sm"></span>
+                            {{ $t('searching_similar') }}
+                        </div>
+                        <SimilarPets v-if="similarPets.length > 0" :pets="similarPets" class="mt-4" />
+
                         <div class="form-control mt-6">
                             <button type="submit" class="btn btn-primary text-gray-50" :disabled="isSubmitting">
                                 {{ isSubmitting ? $t('registering') : $t('register_pet') }}
@@ -171,6 +177,8 @@
     }
 
     const isSubmitting = ref(false)
+    const similarPets = ref<(Pet & { similarity?: number })[]>([])
+    const similarLoading = ref(false)
 
     const form = ref<CreatePetFormData>({
         type: 'Perro',
@@ -197,7 +205,25 @@
             const files = Array.from(target.files)
             form.value.images.push(...files)
 
-            await chatGpt(files[0])
+            await Promise.all([chatGpt(files[0]), searchSimilar(files[0])])
+        }
+    }
+
+    const searchSimilar = async (file: File) => {
+        similarLoading.value = true
+        similarPets.value = []
+        try {
+            const body = new FormData()
+            body.append('image', file)
+            const { data } = await useFetch<(Pet & { similarity?: number })[]>('/api/pets/search/similar', {
+                method: 'POST',
+                body
+            })
+            similarPets.value = data.value ?? []
+        } catch {
+            // non-critical — fail silently
+        } finally {
+            similarLoading.value = false
         }
     }
 
