@@ -1,4 +1,4 @@
-FROM node:22-alpine AS development
+FROM node:24-alpine AS development
 WORKDIR /app
 
 # Runs pending migrations, then the dev server. The .env file is provided by compose, never baked in.
