@@ -1,54 +1,31 @@
 services:
-  backend:
-    build:
-      context: backend
-      target: development
-    env_file:
-      - ./backend/.env
-    ports:
-      - 3000:3000
-    volumes:
-      - ./backend:/app
-    networks:
-      - public
-      - private
-    depends_on:
-      - db
-
-  frontend:
+  app:
     build:
       context: frontend
       target: development
+    env_file:
+      - ./frontend/.env
+    environment:
+      - NUXT_DATABASE_URL=postgres://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-pets}?sslmode=disable
     ports:
       - 8000:8000
     volumes:
       - ./frontend:/app
       # todo node_modules should be created with current user and group id, not root
-    networks:
-      - public
     depends_on:
-      - backend
+      - db
 
   db:
-    image: postgres
-    env_file:
-      - ./backend/.env
+    # Plain Postgres + pgvector, ready for the image search feature.
+    image: pgvector/pgvector:pg17
     restart: always
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-pets}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
     volumes:
-      - ./backend/db/init.d:/docker-entrypoint-initdb.d
       - db-data:/var/lib/postgresql/data
-    networks:
-      - private
     ports:
       - 5432:5432
-    environment:
-      - POSTGRES_DB=${DB_NAME}
-      - POSTGRES_PASSWORD=${DB_PASSWORD}
 
 volumes:
   db-data:
-
-networks:
-  public: 
-    driver: bridge
-  private:

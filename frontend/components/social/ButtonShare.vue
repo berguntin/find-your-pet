@@ -13,7 +13,6 @@
             default: ''
         }
     })
-    const runtimeConfig = useRuntimeConfig()
     const isActive = ref(false)
     const buttonRef = ref(null)
     const popupRef = ref(null)
@@ -45,31 +44,8 @@
         }
     }
 
-    const handleClickOutside = event => {
-        if (
-            isActive.value &&
-            popupRef.value &&
-            !popupRef.value.contains(event.target) &&
-            buttonRef.value &&
-            !buttonRef.value.contains(event.target)
-        ) {
-            togglePopup()
-        }
-    }
 
-    const shareNetworkRef = ref(null)
-    const runWorkaround = index => {
-        if (shareNetworkRef.value[index] === null) return
 
-        clearInterval(shareNetworkRef.value[index].popupInterval)
-        shareNetworkRef.value[index].popupWindow = undefined
-    }
-
-    const handleEscapeKey = event => {
-        if (isActive.value && event.key === 'Escape') {
-            togglePopup()
-        }
-    }
 
     const options = useMetadata(props.pet)
 </script>
@@ -108,7 +84,7 @@
                         </button>
                         <ul class="space-y-2">
                             <li
-                                v-for="(network, index) in networks"
+                                v-for="network in networks"
                                 :key="network.name"
                                 :class="['rounded-md py-2 px-4 text-sm', network.color]"
                             >

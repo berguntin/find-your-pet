@@ -1,6 +1,6 @@
 <script setup lang="ts">
     const emit = defineEmits<{
-        (e: 'search', data: String): void
+        (e: 'search', data: string): void
     }>()
 
     const emitSearch = (search: string) => {

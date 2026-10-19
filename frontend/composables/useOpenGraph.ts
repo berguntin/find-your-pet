@@ -1,4 +1,4 @@
-export const useOpenGraph = (pet: Pet | null): Object => {
+export const useOpenGraph = (pet: Pet | null) => {
     const metaData = useMetadata(pet)
 
     return {

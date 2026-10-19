@@ -3,15 +3,9 @@
 
     const route = useRoute()
 
-    const { data, status, error } = await useFetch<Pet>(`/api/pets/${route.params.id}`)
+    const { data: pet, status, error } = await useFetch<Pet>(`/api/v1/pets/${route.params.id}`)
 
-    const pet = ref(<Pet>{ ...data.value, images: JSON.parse(data.value?.images as string) })
-
-    const metaData = useMetadata(pet.value)
-    const config = useRuntimeConfig()
-    const openGraph = useOpenGraph(pet.value)
-
-    useHead(openGraph)
+    useHead(useOpenGraph(pet.value ?? null))
 </script>
 
 <template>
@@ -26,7 +20,7 @@
             <div class="md:w-1/2 mb-6 md:mb-0 h-full">
                 <div class="relative rounded-lg overflow-hidden">
                     <Swiper>
-                        <SwiperSlide v-for="(photo, index) in pet.images" :key="photo">
+                        <SwiperSlide v-for="photo in pet.images" :key="photo">
                             <img :src="photo" :alt="`imagen de ${pet.name || 'la mascota'}`" class="m-auto" />
                         </SwiperSlide>
                     </Swiper>
@@ -48,25 +42,25 @@
                             </div>
                             <div class="flex items-center">
                                 <Icon name="mdi-light:calendar" />
-                                <span class="text-base-content/70">{{ formatDate(pet.date) }}</span>
+                                <span class="text-base-content/70">{{ formatDate(pet.eventDate) }}</span>
                             </div>
                         </div>
 
                         <div class="flex justify-start gap-3 align-middle mb-4">
-                            <span v-if="pet.athome" class="badge badge-accent badge-lg p-4"
-                                >{{ $t('reunited_with_his_family') }} {{ pet.status }}</span
-                            >
+                            <span v-if="pet.resolution === 'reunited'" class="badge badge-accent badge-lg p-4">{{
+                                $t('reunited_with_his_family')
+                            }}</span>
                             <span
                                 v-else
                                 :class="[
                                     'px-3 py-1 badge font-semibold',
-                                    pet.status === 'lost' ? 'badge-error' : 'badge-warning'
+                                    pet.reportType === 'lost' ? 'badge-error' : 'badge-warning'
                                 ]"
                             >
-                                {{ pet.status === 'lost' ? $t('searching_me') : $t('found_me') }}
+                                {{ pet.reportType === 'lost' ? $t('searching_me') : $t('found_me') }}
                             </span>
                             <span
-                                v-if="pet.status === 'found'"
+                                v-if="pet.reportType === 'found'"
                                 :class="[
                                     'px-3 py-1 badge font-semibold mr-2',
                                     pet.alive ? 'badge-success' : 'badge-error'
@@ -81,11 +75,6 @@
                             <p class="text-base-content/70">{{ pet.contact }}</p>
                         </div>
                         <div class="flex justify-between align-middle mt-4 gap-1">
-                            <div v-if="pet.alive && !pet.athome">
-                                <button :class="['btn w-100 m-auto', error ? 'btn-warning' : 'btn-primary']" @click="">
-                                    {{ error ? error : $t('set_as_at_home') }}
-                                </button>
-                            </div>
                             <ButtonShare :pet="pet" :onlyIcon="false" />
                         </div>
                     </div>

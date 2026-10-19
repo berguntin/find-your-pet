@@ -9,11 +9,8 @@
         }
     })
 
-    const route = useRoute()
-    const config = useRuntimeConfig()
-
     const shareUrl = computed(() => {
-        const { title, text, hashtags, quote, url, via } = props.options
+        const { title, text, hashtags, url, via } = props.options
 
         switch (props.network.name.toLowerCase()) {
             case 'facebook':

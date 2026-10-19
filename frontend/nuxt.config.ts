@@ -26,7 +26,19 @@ export default defineNuxtConfig({
         dirs: ['types']
     },
     runtimeConfig: {
-        apiBase: process.env.NUXT_API_BASE || 'http://localhost:3000/api/', // en vercel agregar NUXT_API_BASE=https://api.mascotasdana.es/api
+        // Server-only. Each key is overridden by its NUXT_* variable (see .env.example).
+        databaseUrl: '',
+        adminToken: '',
+        cloudinary: {
+            cloudName: '',
+            apiKey: '',
+            apiSecret: '',
+            folder: 'pets'
+        },
+        openai: {
+            apiKey: '',
+            describerModel: 'gpt-4o-mini'
+        },
         public: {
             baseUrl: 'http://localhost:8000' // en vercel agregar NUXT_PUBLIC_BASE_URL=https://mascotasdana.es
         }

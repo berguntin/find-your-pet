@@ -1,4 +1,5 @@
 FROM node:22-alpine AS development
 WORKDIR /app
 
-CMD ["sh", "-c", "npm i && npm run dev"]
+# Runs pending migrations, then the dev server. The .env file is provided by compose, never baked in.
+CMD ["sh", "-c", "npm install && npm run db:migrate && npm run dev -- --host 0.0.0.0"]
