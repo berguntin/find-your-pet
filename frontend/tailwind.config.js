@@ -2,52 +2,49 @@
 export default {
     content: [],
     theme: {
-        extend: {}
+        extend: {
+            fontFamily: {
+                sans: ['Nunito', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif']
+            },
+            colors: {
+                // Report states. Every pair keeps at least 4.5:1 contrast with white text.
+                lost: '#B42318',
+                found: '#1F7A4D',
+                reunited: '#2F6F6A'
+            }
+        }
     },
     plugins: [require('daisyui')],
     daisyui: {
+        logs: false,
         themes: [
             {
-                mytheme: {
-                    primary: '#00cbc5',
-
-                    'primary-content': '#000f0e',
-
-                    secondary: '#00799e',
-
-                    'secondary-content': '#d3e4ec',
-
-                    accent: '#00cbff',
-
-                    'accent-content': '#000f16',
-
-                    neutral: '#141414',
-
-                    'neutral-content': '#cacaca',
-
-                    'base-100': '#FAFAFA',
-
-                    'base-200': '#d3dede',
-
-                    'base-300': '#E1EEFF',
-
-                    'base-content': '#141616',
-
-                    info: '#008ef9',
-
-                    'info-content': '#000715',
-
-                    success: '#00f19c',
-
-                    'success-content': '#001409',
-
-                    warning: '#e64d00',
-
-                    'warning-content': '#130200',
-
-                    error: '#ff4b86',
-
-                    'error-content': '#160206'
+                // Warm and friendly: cream backgrounds, terracotta actions, dark brown text.
+                mascotas: {
+                    primary: '#C2511A',
+                    'primary-content': '#FFFFFF',
+                    secondary: '#2F6F6A',
+                    'secondary-content': '#FFFFFF',
+                    accent: '#F4B740',
+                    'accent-content': '#3B2A1E',
+                    neutral: '#3B2A1E',
+                    'neutral-content': '#FFFBF5',
+                    'base-100': '#FFFBF5',
+                    'base-200': '#F6EDE2',
+                    'base-300': '#EADBC8',
+                    'base-content': '#3B2A1E',
+                    info: '#2F6F6A',
+                    'info-content': '#FFFFFF',
+                    success: '#1F7A4D',
+                    'success-content': '#FFFFFF',
+                    warning: '#F4B740',
+                    'warning-content': '#3B2A1E',
+                    error: '#B42318',
+                    'error-content': '#FFFFFF',
+                    '--rounded-box': '1.25rem',
+                    '--rounded-btn': '9999px',
+                    '--rounded-badge': '9999px',
+                    '--btn-text-case': 'none'
                 }
             }
         ]

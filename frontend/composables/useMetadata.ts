@@ -33,14 +33,13 @@ export const useMetadata = (pet: Pet | null): Metadata => {
         if (!pet.alive) {
             return `Tristemente, ha sido encontrado fallecido`
         }
-        return truncateDescription() || 'Mascotas perdidas y encontradas DANA Valencia'
+        return truncateDescription() || 'Mascotas Encontradas'
     }
 
     const getHastags = (): string => {
         const hashtags: string[] = []
         hashtags.push(pet.reportType === 'lost' ? 'perdido' : 'encontrado')
-        hashtags.push('DANA')
-        hashtags.push('VLC')
+        hashtags.push('mascotasperdidas')
         hashtags.push('ayuda')
 
         return hashtags.join(',')

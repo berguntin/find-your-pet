@@ -1,14 +1,55 @@
 @layer base {
-    body {
-        font-family: Nunito, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica Neue, Arial,
-            Noto Sans, sans-serif, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol, Noto Color Emoji;
+    html {
+        @apply bg-base-100 text-base-content antialiased;
     }
 
     h1 {
-        @apply text-3xl font-extrabold  sm:text-4xl md:text-5xl;
+        @apply text-3xl font-extrabold tracking-tight sm:text-4xl md:text-5xl;
     }
 
-    .container {
-        @apply p-3;
+    h2 {
+        @apply text-xl font-bold sm:text-2xl;
+    }
+
+    :focus-visible {
+        @apply outline outline-2 outline-offset-2 outline-primary;
+    }
+}
+
+@layer components {
+    /* Muted secondary text that still meets contrast on cream backgrounds. */
+    .text-muted {
+        color: #6b5646;
+    }
+
+    .surface {
+        @apply bg-white rounded-box shadow-sm ring-1 ring-base-300/60;
+    }
+
+    .status-badge {
+        @apply inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide text-white shadow-sm;
+    }
+
+    .status-lost {
+        @apply bg-lost;
+    }
+
+    .status-found {
+        @apply bg-found;
+    }
+
+    .status-reunited {
+        @apply bg-reunited;
+    }
+}
+
+@layer utilities {
+    /* Horizontal rows that scroll by swiping, without a visible scrollbar. */
+    .scrollbar-none {
+        scrollbar-width: none;
+    }
+
+    .scrollbar-none::-webkit-scrollbar {
+        display: none;
     }
 }

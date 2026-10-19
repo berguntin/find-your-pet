@@ -3,22 +3,20 @@
         (e: 'search', data: string): void
         (e: 'searchByImage', file: File): void
     }>()
-
-    const emitSearch = (search: string) => {
-        emit('search', search)
-    }
 </script>
 
 <template>
-    <div class="text-center p-5 bg-base-100">
-        <h1 class="text-md text-secondary">{{ $t('mainpage_title') }}</h1>
-        <p class="max-w-md mx-auto mt-3 text-balance text-center text-base-content">
-            {{ $t('mainpage_subtitle_1') }}
-            <br />
-            {{ $t('we_need') }} <strong> {{ $t('your_help') }}</strong>
-            {{ $t('mainpage_subtitle_2') }}
-        </p>
-
-        <AppSearch @update-query="emitSearch" @search-by-image="file => emit('searchByImage', file)" />
-    </div>
+    <section class="bg-gradient-to-b from-base-200 to-base-100">
+        <div class="mx-auto max-w-6xl px-4 pb-5 pt-6 sm:px-6 sm:pb-10 sm:pt-14">
+            <div class="max-w-2xl">
+                <h1 class="text-balance text-[1.75rem] leading-tight sm:text-5xl">{{ $t('hero_title') }}</h1>
+                <p class="mt-2 text-sm text-muted sm:mt-3 sm:text-lg">{{ $t('hero_subtitle') }}</p>
+            </div>
+            <AppSearch
+                class="mt-5 max-w-2xl sm:mt-6"
+                @update-query="text => emit('search', text)"
+                @search-by-image="file => emit('searchByImage', file)"
+            />
+        </div>
+    </section>
 </template>

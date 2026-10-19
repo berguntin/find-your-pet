@@ -1,87 +1,71 @@
 <script setup lang="ts">
-    import ButtonShare from '@/components/social/ButtonShare.vue'
-
     const props = defineProps<{
         pet: Pet
-        /** Image search similarity, 0–100. */
+        /** Search similarity, 0–100. */
         match?: number
     }>()
 
-    const matchClass = computed(() => {
-        if (props.match === undefined) return ''
-        if (props.match >= 80) return 'badge-success'
-        if (props.match >= 50) return 'badge-warning'
-        return 'badge-neutral'
-    })
+    const { locale, t } = useI18n()
+    const title = computed(() => props.pet.name || t(`unnamed_${props.pet.species}`))
+    const when = computed(() => formatRelativeDate(props.pet.eventDate, locale.value))
+    const speciesIcon = { dog: 'mdi:dog', cat: 'mdi:cat', other: 'mdi:rabbit' } as const
 </script>
 
 <template>
-    <div class="card bg-base-100 shadow-xl overflow-hidden">
-        <figure class="relative h-[300px]">
-            <Swiper class="w-full h-[300px]" :loop="true">
-                <SwiperSlide v-for="(image, index) in pet.images" :key="image">
-                    <img
-                        loading="lazy"
-                        :class="['w-full h-80 object-cover', !pet.alive ? 'blur-md' : '']"
-                        :src="image"
-                        :alt="`${pet.name || $t(pet.species)} - ${index + 1}`"
-                    />
-                </SwiperSlide>
-            </Swiper>
-
-            <div v-if="!pet.alive" class="absolute z-10 inset-0 flex justify-center items-center flex-col text-gray-50">
-                <Icon name="el:eye-close" />
-                <span>{{ $t('sensible_content') }}</span>
-            </div>
-            <!-- Reunited pets never appear in image search, so both badges can share the corner. -->
+    <article
+        class="surface group relative flex flex-col overflow-hidden transition hover:-translate-y-0.5 hover:shadow-md"
+    >
+        <div class="relative aspect-[4/3] overflow-hidden bg-base-200">
+            <img
+                loading="lazy"
+                :src="pet.images[0]"
+                :alt="title"
+                class="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
+                :class="{ 'blur-xl scale-110': !pet.alive }"
+            />
             <div
+                v-if="!pet.alive"
+                class="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-neutral/50 text-sm font-semibold text-neutral-content"
+            >
+                <Icon name="mdi:eye-off-outline" size="1.5rem" />
+                {{ $t('sensible_content') }}
+            </div>
+            <div class="absolute left-3 top-3 flex flex-wrap gap-2">
+                <PetStatusBadge :pet="pet" />
+                <span v-if="!pet.alive" class="status-badge bg-neutral">{{ $t('deceased') }}</span>
+            </div>
+            <span
                 v-if="match !== undefined"
-                class="absolute top-2 left-2 badge badge-lg gap-1 p-4 z-10 font-semibold"
-                :class="matchClass"
+                class="absolute right-3 top-3 rounded-full bg-accent px-3 py-1 text-xs font-extrabold text-accent-content shadow-sm"
             >
-                <Icon name="material-symbols:image-search" />
                 {{ $t('match_percentage', { match }) }}
-            </div>
-            <div v-else-if="pet.resolution === 'reunited'" class="absolute top-2 left-2 badge badge-primary badge-lg gap-2 p-4 z-10">
-                <Icon name="material-symbols:home-outline" />
-                {{ $t('reunited_with_his_family') }}
-            </div>
-            <div
-                v-else
-                class="absolute top-2 right-2 badge badge-lg text-gray-100 z-10"
-                :class="pet.reportType === 'lost' ? 'badge-error' : 'badge-warning text-gray-900'"
+            </span>
+            <span
+                v-if="pet.images.length > 1"
+                class="absolute bottom-3 right-3 flex items-center gap-1 rounded-full bg-neutral/70 px-2 py-0.5 text-xs text-neutral-content"
             >
-                {{ pet.reportType === 'lost' ? $t('searching_me') : $t('found_me') }}
-            </div>
-        </figure>
-        <div class="card-body p-4">
-            <div class="flex justify-between text-sm">
-                <div class="flex items-center">
-                    <Icon name="bxs:map" />
-                    <span>{{ pet.location }}</span>
-                </div>
-                <div class="flex items-center">
-                    <Icon name="mdi-light:calendar" />
-                    <span>{{ formatDate(pet.eventDate) }}</span>
-                </div>
-            </div>
-            <div class="flex items-center justify-between mt-2">
-                <div class="flex items-center overflow-hidden">
-                    <Icon name="fluent-mdl2:contact" />
-                    <span class="truncate"> {{ pet.contact }} </span>
-                </div>
-                <div v-if="!pet.alive" class="badge badge-neutral">{{ $t('deceased') }}</div>
-            </div>
-            <p class="text-sm mt-2 line-clamp-2 mb-2">
-                {{ pet.description.replace(/\n/g, ' ').replace(/\s+/g, ' ').trim() }}
+                <Icon name="mdi:image-multiple-outline" size="0.9rem" /> {{ pet.images.length }}
+            </span>
+        </div>
+
+        <div class="flex flex-1 flex-col gap-2 p-4">
+            <h3 class="text-lg font-extrabold leading-tight">
+                <!-- The link covers the whole card; the share button sits above it. -->
+                <NuxtLink :to="{ name: 'mascota-id', params: { id: pet.id } }" class="after:absolute after:inset-0">
+                    {{ title }}
+                </NuxtLink>
+            </h3>
+            <p class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted">
+                <span class="flex items-center gap-1"
+                    ><Icon :name="speciesIcon[pet.species]" /> {{ $t(pet.species) }}</span
+                >
+                <span class="flex items-center gap-1"><Icon name="mdi:map-marker-outline" /> {{ pet.location }}</span>
+                <span class="flex items-center gap-1">
+                    <Icon name="mdi:calendar-blank-outline" />
+                    <time :datetime="pet.eventDate">{{ when }}</time>
+                </span>
             </p>
+            <p class="line-clamp-2 text-sm">{{ pet.description }}</p>
         </div>
-        <div class="card-actions p-2 flex justify-between">
-            <ButtonShare :pet="pet" :onlyIcon="true" className="btn-ghost" />
-            <NuxtLink :to="{ name: 'mascota-id', params: { id: pet.id } }" class="w-100 btn btn-ghost">
-                {{ $t('view_details') }}
-                <Icon name="mdi:arrow-up-thin" class="rotate-90" size="1.5rem" />
-            </NuxtLink>
-        </div>
-    </div>
+    </article>
 </template>
