@@ -3,7 +3,7 @@
     <footer class="footer bg-base-200 text-base-content p-10">
         <div>
             <h3 class="footer-title">{{ $t('community_project') }}</h3>
-            <p>{{ $t('project_created_by_comunity') }}</p>
+            <p>{{ $t('project_created_by_community') }}</p>
             <p>{{ $t('do_you_want_to_colabore') }}</p>
             <div class="flex gap-4 mt-4">
                 <a

@@ -17,7 +17,14 @@ export default defineNuxtConfig({
         }
     },
     i18n: {
-        vueI18n: './i18n.config.ts'
+        // Texts live in i18n.config.ts; the module still needs the list of locales it serves.
+        vueI18n: './i18n.config.ts',
+        strategy: 'no_prefix',
+        defaultLocale: 'es',
+        locales: [
+            { code: 'es', language: 'es-ES', name: 'Español' },
+            { code: 'en', language: 'en-US', name: 'English' }
+        ]
     },
     tailwindcss: {
         cssPath: '~/assets/css/app.css'
