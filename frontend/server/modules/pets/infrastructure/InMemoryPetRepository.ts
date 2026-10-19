@@ -1,4 +1,5 @@
 import type { Page } from '../../../shared/application/ports'
+import { InMemoryOutboxStore } from '../../../shared/infrastructure/InMemoryOutboxStore'
 import { Pet } from '../domain/Pet'
 import type { PetRepository, PetSearchCriteria } from '../application/ports'
 
@@ -6,8 +7,15 @@ import type { PetRepository, PetSearchCriteria } from '../application/ports'
 export class InMemoryPetRepository implements PetRepository {
     private readonly pets = new Map<string, Pet>()
 
+    constructor(readonly outbox = new InMemoryOutboxStore()) {}
+
     async save(pet: Pet): Promise<void> {
         this.pets.set(pet.id, Pet.restore(pet.toSnapshot()))
+        this.outbox.append(pet.pullEvents())
+    }
+
+    async listAllImageUrls(): Promise<string[]> {
+        return [...this.pets.values()].flatMap(pet => pet.toSnapshot().images)
     }
 
     async findById(id: string): Promise<Pet | null> {
@@ -26,6 +34,7 @@ export class InMemoryPetRepository implements PetRepository {
             .filter(pet => !criteria.reportType || pet.reportType === criteria.reportType)
             .filter(pet => !criteria.species || pet.species === criteria.species)
             .filter(pet => !criteria.resolution || pet.resolution === criteria.resolution)
+            .filter(pet => !criteria.moderationStatus || pet.moderationStatus === criteria.moderationStatus)
             .filter(
                 pet =>
                     !query ||

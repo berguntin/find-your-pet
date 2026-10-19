@@ -29,6 +29,7 @@ export default defineNuxtConfig({
         // Server-only. Each key is overridden by its NUXT_* variable (see .env.example).
         databaseUrl: '',
         adminToken: '',
+        internalToken: '',
         cloudinary: {
             cloudName: '',
             apiKey: '',
@@ -37,7 +38,12 @@ export default defineNuxtConfig({
         },
         openai: {
             apiKey: '',
-            describerModel: 'gpt-4o-mini'
+            describerModel: 'gpt-4o-mini',
+            moderationModel: 'gpt-6-luna'
+        },
+        upstash: {
+            url: '',
+            token: ''
         },
         public: {
             baseUrl: 'http://localhost:8000' // en vercel agregar NUXT_PUBLIC_BASE_URL=https://mascotasdana.es

@@ -1,4 +1,4 @@
-export type DomainErrorCode = 'validation' | 'not_found' | 'forbidden' | 'conflict'
+export type DomainErrorCode = 'validation' | 'content_rejected' | 'not_found' | 'forbidden' | 'conflict'
 
 export class DomainError extends Error {
     constructor(
@@ -14,6 +14,13 @@ export class DomainError extends Error {
 export class ValidationError extends DomainError {
     constructor(message: string, details?: Record<string, unknown>) {
         super('validation', message, details)
+    }
+}
+
+/** The content is valid but not acceptable for the site (not a pet report, offensive...). */
+export class ContentRejectedError extends DomainError {
+    constructor(message = 'The report does not look like a lost or found pet') {
+        super('content_rejected', message)
     }
 }
 

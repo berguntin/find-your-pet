@@ -1,0 +1,31 @@
+# Vercel Hobby only runs crons once a day, so this workflow retries pending outbox events every
+# 15 minutes and cleans up orphan images every night. Needs the APP_URL variable and the
+# INTERNAL_TOKEN secret (same value as NUXT_INTERNAL_TOKEN) in the repository settings.
+name: Scheduled jobs
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+jobs:
+  outbox:
+    if: ${{ vars.APP_URL != '' && (github.event_name == 'workflow_dispatch' || github.event.schedule == '*/15 * * * *') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Process outbox
+        run: |
+          curl --fail-with-body --silent --show-error --max-time 60 -X POST \
+            -H "Authorization: Bearer ${{ secrets.INTERNAL_TOKEN }}" \
+            "${{ vars.APP_URL }}/api/internal/outbox/process"
+
+  image-cleanup:
+    if: ${{ vars.APP_URL != '' && (github.event_name == 'workflow_dispatch' || github.event.schedule == '0 3 * * *') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clean up orphan images
+        run: |
+          curl --fail-with-body --silent --show-error --max-time 60 -X POST \
+            -H "Authorization: Bearer ${{ secrets.INTERNAL_TOKEN }}" \
+            "${{ vars.APP_URL }}/api/internal/images/cleanup"

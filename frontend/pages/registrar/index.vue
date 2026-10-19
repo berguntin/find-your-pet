@@ -229,9 +229,15 @@
         try {
             const resized = await Promise.all(files.value.map(file => resizeImage(file, 1600)))
             const images = await Promise.all(resized.map(image => api.uploadImage(image)))
-            await api.report({ ...form.value, images })
+            const pet = await api.report({ ...form.value, images })
 
-            alert.value = { type: 'success', message: 'Se ha registrado correctamente la mascota' }
+            alert.value = {
+                type: 'success',
+                message:
+                    pet.moderationStatus === 'approved'
+                        ? 'Se ha registrado correctamente la mascota'
+                        : 'Hemos recibido el aviso. Lo revisaremos antes de publicarlo.'
+            }
         } catch (error) {
             console.error('Error saving pet:', error)
             alert.value = { type: 'error', message: errorMessage(error) }
@@ -243,8 +249,16 @@
 
     function errorMessage(error: unknown): string {
         const apiError = error instanceof FetchError ? (error.data as ApiErrorDto | undefined)?.error : undefined
-        if (apiError?.code === 'validation') return 'Revisa los datos del formulario, alguno no es válido'
-        return 'Ha ocurrido un error, por favor, inténtelo de nuevo'
+        switch (apiError?.code) {
+            case 'validation':
+                return 'Revisa los datos del formulario, alguno no es válido'
+            case 'content_rejected':
+                return 'El aviso no parece de una mascota perdida o encontrada, así que no se ha publicado'
+            case 'rate_limited':
+                return 'Has enviado demasiados avisos seguidos. Inténtalo de nuevo más tarde'
+            default:
+                return 'Ha ocurrido un error, por favor, inténtelo de nuevo'
+        }
     }
 </script>
 

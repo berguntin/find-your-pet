@@ -1,9 +1,12 @@
 import type { Actor } from '../../../shared/domain/actor'
 import { ConflictError, ForbiddenError, ValidationError } from '../../../shared/domain/errors'
+import type { PetEvent } from './events'
+import type { ModerationScores } from './moderation'
 import {
     PET_LIMITS,
     REPORT_TYPES,
     SPECIES,
+    type ModerationStatus,
     type ReportType,
     type Resolution,
     type ResolvedBy,
@@ -27,6 +30,10 @@ export interface PetProps {
     resolvedBy: ResolvedBy | null
     resolvedAt: Date | null
     ownerId: string | null
+    /** New reports wait for moderation; only approved pets are public. */
+    moderationStatus: ModerationStatus
+    moderationScores: ModerationScores | null
+    moderatedAt: Date | null
     createdAt: Date
 }
 
@@ -46,6 +53,8 @@ const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
 const ONE_DAY_MS = 24 * 60 * 60 * 1000
 
 export class Pet {
+    private events: PetEvent[] = []
+
     private constructor(private props: PetProps) {}
 
     static report(data: ReportPetData, context: { id: string; now: Date; ownerId?: string | null }): Pet {
@@ -79,6 +88,9 @@ export class Pet {
             resolvedBy: null,
             resolvedAt: null,
             ownerId: context.ownerId ?? null,
+            moderationStatus: 'pending_review',
+            moderationScores: null,
+            moderatedAt: null,
             createdAt: context.now
         })
     }
@@ -95,8 +107,44 @@ export class Pet {
         return this.props.resolution === 'reunited'
     }
 
+    /** Visible to everyone: approved by moderation. */
+    get isPublic(): boolean {
+        return this.props.moderationStatus === 'approved'
+    }
+
     toSnapshot(): Readonly<PetProps> {
-        return { ...this.props, images: [...this.props.images] }
+        return {
+            ...this.props,
+            images: [...this.props.images],
+            moderationScores: this.props.moderationScores && { ...this.props.moderationScores }
+        }
+    }
+
+    /** Events recorded since the pet was loaded; the repository stores them in the outbox. */
+    pullEvents(): PetEvent[] {
+        const events = this.events
+        this.events = []
+        return events
+    }
+
+    /** Records the automatic moderation of a new report. Rejected reports never become pets. */
+    applyAutomaticModeration(status: ModerationStatus, scores: ModerationScores | null, now: Date): void {
+        if (this.props.moderatedAt) throw new ConflictError('The pet was already moderated')
+
+        this.props.moderationStatus = status
+        this.props.moderationScores = scores
+        this.props.moderatedAt = now
+        if (status === 'approved') this.recordPublished(now)
+    }
+
+    /** An admin publishes a report that automatic moderation left for review. */
+    approve(actor: Actor, now: Date): void {
+        if (actor.kind !== 'admin') throw new ForbiddenError()
+        if (this.isPublic) throw new ConflictError('The pet is already published')
+
+        this.props.moderationStatus = 'approved'
+        this.props.moderatedAt = now
+        this.recordPublished(now)
     }
 
     canBeManagedBy(actor: Actor): boolean {
@@ -115,6 +163,11 @@ export class Pet {
         this.props.resolution = 'reunited'
         this.props.resolvedBy = actor.kind === 'admin' ? 'admin' : 'owner'
         this.props.resolvedAt = now
+        this.events.push({ type: 'pet.reunited', occurredAt: now, payload: { petId: this.props.id } })
+    }
+
+    private recordPublished(now: Date): void {
+        this.events.push({ type: 'pet.published', occurredAt: now, payload: { petId: this.props.id } })
     }
 }
 

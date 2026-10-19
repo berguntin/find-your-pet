@@ -15,14 +15,29 @@ describe('parseServerConfig', () => {
         const config = parseServerConfig(runtimeConfig())
 
         expect(config.adminToken).toBeUndefined()
+        expect(config.internalToken).toBeUndefined()
         expect(config.openai.apiKey).toBeUndefined()
+        expect(config.upstash).toEqual({ url: undefined, token: undefined })
     })
 
     it('keeps optional values when set', () => {
-        const config = parseServerConfig(runtimeConfig({ adminToken: 'token', openai: { apiKey: 'sk-test' } }))
+        const config = parseServerConfig(
+            runtimeConfig({
+                adminToken: 'token',
+                internalToken: 'internal',
+                openai: { apiKey: 'sk-test' },
+                upstash: { url: 'https://redis.test', token: 'redis-token' }
+            })
+        )
 
         expect(config.adminToken).toBe('token')
-        expect(config.openai).toEqual({ apiKey: 'sk-test', describerModel: 'gpt-4o-mini' })
+        expect(config.internalToken).toBe('internal')
+        expect(config.openai).toEqual({
+            apiKey: 'sk-test',
+            describerModel: 'gpt-4o-mini',
+            moderationModel: 'gpt-6-luna'
+        })
+        expect(config.upstash).toEqual({ url: 'https://redis.test', token: 'redis-token' })
     })
 
     it('lists every missing required variable', () => {
