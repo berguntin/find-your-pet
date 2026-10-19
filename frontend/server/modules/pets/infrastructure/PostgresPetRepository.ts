@@ -1,9 +1,11 @@
 import type { Page } from '../../../shared/application/ports'
 import { ValidationError } from '../../../shared/domain/errors'
 import type { Database } from '../../../shared/infrastructure/database'
+import { appendToOutbox } from '../../../shared/infrastructure/PostgresOutboxStore'
 import type { PetRepository, PetSearchCriteria } from '../application/ports'
+import type { ModerationScores } from '../domain/moderation'
 import { Pet } from '../domain/Pet'
-import type { ReportType, Resolution, ResolvedBy, Species } from '../domain/values'
+import type { ModerationStatus, ReportType, Resolution, ResolvedBy, Species } from '../domain/values'
 
 interface PetRow {
     id: string
@@ -20,6 +22,9 @@ interface PetRow {
     resolved_by: ResolvedBy | null
     resolved_at: Date | null
     owner_id: string | null
+    moderation_status: ModerationStatus
+    moderation_scores: ModerationScores | null
+    moderated_at: Date | null
     created_at: Date
 }
 
@@ -38,17 +43,34 @@ const COLUMNS = [
     'resolved_by',
     'resolved_at',
     'owner_id',
+    'moderation_status',
+    'moderation_scores',
+    'moderated_at',
     'created_at'
 ] as const
 
 export class PostgresPetRepository implements PetRepository {
     constructor(private readonly sql: Database) {}
 
+    /** Stores the pet and its recorded events atomically. */
     async save(pet: Pet): Promise<void> {
+        const events = pet.pullEvents()
+        await this.sql.begin(async transaction => {
+            const sql = transaction as unknown as Database
+            await this.upsert(sql, pet)
+            await appendToOutbox(sql, events)
+        })
+    }
+
+    private async upsert(sql: Database, pet: Pet): Promise<void> {
+        const row = toRow(pet)
         // postgres.js cannot map a typed row interface to its parameter types, hence the cast.
-        const row = toRow(pet) as never
-        await this.sql`
-            insert into pets ${this.sql(row, COLUMNS)}
+        const values = {
+            ...row,
+            moderation_scores: row.moderation_scores && sql.json(row.moderation_scores as never)
+        } as never
+        await sql`
+            insert into pets ${sql(values, COLUMNS)}
             on conflict (id) do update set
                 report_type = excluded.report_type,
                 species = excluded.species,
@@ -62,8 +84,16 @@ export class PostgresPetRepository implements PetRepository {
                 resolution = excluded.resolution,
                 resolved_by = excluded.resolved_by,
                 resolved_at = excluded.resolved_at,
-                owner_id = excluded.owner_id
+                owner_id = excluded.owner_id,
+                moderation_status = excluded.moderation_status,
+                moderation_scores = excluded.moderation_scores,
+                moderated_at = excluded.moderated_at
         `
+    }
+
+    async listAllImageUrls(): Promise<string[]> {
+        const rows = await this.sql<{ url: string }[]>`select distinct unnest(images) as url from pets`
+        return rows.map(row => row.url)
     }
 
     async findById(id: string): Promise<Pet | null> {
@@ -86,6 +116,7 @@ export class PostgresPetRepository implements PetRepository {
                 ${criteria.reportType ? sql`and report_type = ${criteria.reportType}` : sql``}
                 ${criteria.species ? sql`and species = ${criteria.species}` : sql``}
                 ${criteria.resolution ? sql`and resolution = ${criteria.resolution}` : sql``}
+                ${criteria.moderationStatus ? sql`and moderation_status = ${criteria.moderationStatus}` : sql``}
                 ${
                     pattern
                         ? sql`and (name ilike ${pattern} or description ilike ${pattern} or location ilike ${pattern})`
@@ -123,6 +154,9 @@ function toRow(pet: Pet): PetRow {
         resolved_by: p.resolvedBy,
         resolved_at: p.resolvedAt,
         owner_id: p.ownerId,
+        moderation_status: p.moderationStatus,
+        moderation_scores: p.moderationScores,
+        moderated_at: p.moderatedAt,
         created_at: p.createdAt
     }
 }
@@ -143,6 +177,9 @@ function toDomain(row: PetRow): Pet {
         resolvedBy: row.resolved_by,
         resolvedAt: row.resolved_at,
         ownerId: row.owner_id,
+        moderationStatus: row.moderation_status,
+        moderationScores: row.moderation_scores,
+        moderatedAt: row.moderated_at,
         createdAt: row.created_at
     })
 }

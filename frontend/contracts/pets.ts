@@ -4,18 +4,20 @@
  */
 import { z } from 'zod'
 import {
+    MODERATION_STATUSES,
     PET_LIMITS,
     REPORT_TYPES,
     RESOLUTIONS,
     SPECIES,
+    type ModerationStatus,
     type ReportType,
     type Resolution,
     type ResolvedBy,
     type Species
 } from '../server/modules/pets/domain/values'
 
-export { PET_LIMITS, REPORT_TYPES, RESOLUTIONS, SPECIES }
-export type { ReportType, Resolution, ResolvedBy, Species }
+export { MODERATION_STATUSES, PET_LIMITS, REPORT_TYPES, RESOLUTIONS, SPECIES }
+export type { ModerationStatus, ReportType, Resolution, ResolvedBy, Species }
 
 export const reportPetSchema = z.object({
     reportType: z.enum(REPORT_TYPES),
@@ -39,6 +41,15 @@ export const listPetsQuerySchema = z.object({
     limit: z.coerce.number().int().min(1).max(50).default(24)
 })
 export type ListPetsQuery = z.input<typeof listPetsQuerySchema>
+
+export const adminListPetsQuerySchema = listPetsQuerySchema.extend({
+    moderationStatus: z.enum(MODERATION_STATUSES).optional()
+})
+
+export const moderatePetSchema = z.object({
+    status: z.enum(['approved', 'rejected'])
+})
+export type ModeratePetRequest = z.input<typeof moderatePetSchema>
 
 export const updatePetSchema = z.object({
     resolution: z.literal('reunited')
@@ -70,6 +81,8 @@ export interface PetDto {
     resolution: Resolution
     resolvedBy: ResolvedBy | null
     resolvedAt: string | null
+    /** `pending_review` pets are only returned to whoever reported or manages them. */
+    moderationStatus: ModerationStatus
     createdAt: string
 }
 
@@ -95,7 +108,15 @@ export interface UploadAuthorizationDto {
 
 export interface ApiErrorDto {
     error: {
-        code: 'validation' | 'not_found' | 'forbidden' | 'conflict' | 'unauthorized' | 'internal'
+        code:
+            | 'validation'
+            | 'content_rejected'
+            | 'not_found'
+            | 'forbidden'
+            | 'conflict'
+            | 'unauthorized'
+            | 'rate_limited'
+            | 'internal'
         message: string
         details?: Record<string, unknown>
     }

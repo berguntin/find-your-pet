@@ -33,16 +33,32 @@ serve them as routes.
 
 | Method | Path | Notes |
 |---|---|---|
-| GET | `/api/v1/pets` | Filters `reportType`, `species`, `resolution`, `q`; cursor pagination (`cursor`, `limit`) |
-| POST | `/api/v1/pets` | Report a pet. Images must be Cloudinary URLs uploaded through the app |
-| GET | `/api/v1/pets/:id` | |
+| GET | `/api/v1/pets` | Approved pets only. Filters `reportType`, `species`, `resolution`, `q`; cursor pagination (`cursor`, `limit`) |
+| POST | `/api/v1/pets` | Report a pet. Images must be Cloudinary URLs uploaded through the app. Moderated automatically: `422 content_rejected`, or stored as `pending_review` (hidden) or `approved`. Rate limited |
+| GET | `/api/v1/pets/:id` | Pending pets return 404 except to admins |
 | PATCH | `/api/v1/pets/:id` | `{ "resolution": "reunited" }`. Admin only for now |
 | DELETE | `/api/v1/pets/:id` | Admin only for now |
-| POST | `/api/v1/pets/describe` | Pre-fills the form from a photo (OpenAI) |
-| POST | `/api/v1/uploads/signature` | Signed parameters to upload an image straight to Cloudinary |
+| POST | `/api/v1/pets/describe` | Pre-fills the form from a photo (OpenAI). Rate limited |
+| POST | `/api/v1/uploads/signature` | Signed parameters to upload an image straight to Cloudinary. Rate limited |
+| GET | `/api/v1/admin/pets` | Admin. Reports by `moderationStatus` (`pending_review` by default) |
+| PATCH | `/api/v1/admin/pets/:id/moderation` | Admin. `{ "status": "approved" }` publishes; `"rejected"` deletes the report and its images |
+| * | `/api/internal/outbox/process` | Internal token. Delivers pending domain events |
+| * | `/api/internal/images/cleanup` | Internal token. Deletes uploads older than a day that no pet uses |
 
-Errors always look like `{ "error": { "code", "message", "details" } }`. Admin actions use
-`Authorization: Bearer $NUXT_ADMIN_TOKEN` until Google login exists.
+Errors always look like `{ "error": { "code", "message", "details" } }`; `429` responses include `Retry-After`.
+Admin actions use `Authorization: Bearer $NUXT_ADMIN_TOKEN` until Google login exists; internal endpoints use
+`$NUXT_INTERNAL_TOKEN` (or Vercel's `CRON_SECRET`).
+
+## Moderation, rate limiting and background work
+
+- **Moderation**: every report goes through the OpenAI Decisions API (`gpt-6-luna`). Clear pet reports are
+  published, clearly unrelated or inappropriate ones are rejected and their images deleted, and anything
+  uncertain (or any moderator failure) waits hidden for an admin. Without an OpenAI key, development approves
+  everything and production sends everything to review.
+- **Rate limiting**: Upstash Redis, per client IP, on report, describe and upload signature. Off without Upstash.
+- **Outbox**: domain events (`pet.published`, `pet.reunited`) are stored with the change and delivered right
+  after the response. A GitHub Actions workflow (`scheduled-jobs.yml`) retries every 15 minutes and cleans up
+  orphan images nightly; Vercel Cron does both once a day as a fallback (Hobby plan limit).
 
 ## Running locally
 
@@ -72,3 +88,6 @@ Without Docker, from `frontend/`: start a Postgres, set `NUXT_DATABASE_URL`, the
 Set the `NUXT_*` variables from `frontend/.env.example` in the Vercel project (use Supabase's pooler URL for
 `NUXT_DATABASE_URL`) and run `npm run db:migrate` against the production database before deploying a release
 that adds migrations.
+
+Also set `CRON_SECRET` to the same value as `NUXT_INTERNAL_TOKEN`, and in GitHub add the repository variable
+`APP_URL` (e.g. `https://mascotasdana.es`) and the secret `INTERNAL_TOKEN` for the scheduled workflow.

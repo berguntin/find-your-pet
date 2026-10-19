@@ -9,12 +9,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ApiErrorDto, PetDto, PetPageDto, ReportPetRequest } from '../../contracts/pets'
 import type { Container } from '../container'
 import { createPetsModule } from '../modules/pets'
-import type { PetDescriber } from '../modules/pets/application/ports'
+import type { ContentModerator, PetDescriber } from '../modules/pets/application/ports'
+import { InMemoryImageStorage } from '../modules/pets/infrastructure/InMemoryImageStorage'
 import { InMemoryPetRepository } from '../modules/pets/infrastructure/InMemoryPetRepository'
+import { EventHandlerRegistry, ProcessOutbox } from '../shared/application/outbox'
+import type { RateLimiter } from '../shared/application/rateLimit'
 
 let container: Container
+const processOutboxInBackground = vi.fn()
 
-vi.mock('../container', () => ({ useContainer: () => container }))
+vi.mock('../container', () => ({ useContainer: () => container, processOutboxInBackground }))
 vi.mock('consola', () => ({ consola: { error: vi.fn() } }))
 
 const { default: listPets } = await import('../api/v1/pets/index.get')
@@ -24,6 +28,10 @@ const { default: updatePet } = await import('../api/v1/pets/[id].patch')
 const { default: deletePet } = await import('../api/v1/pets/[id].delete')
 const { default: describePet } = await import('../api/v1/pets/describe.post')
 const { default: signUpload } = await import('../api/v1/uploads/signature.post')
+const { default: adminListPets } = await import('../api/v1/admin/pets/index.get')
+const { default: moderatePet } = await import('../api/v1/admin/pets/[id]/moderation.patch')
+const { default: processOutbox } = await import('../api/internal/outbox/process')
+const { default: cleanUpImages } = await import('../api/internal/images/cleanup')
 
 const router = createRouter()
     .get('/api/v1/pets', listPets)
@@ -33,16 +41,25 @@ const router = createRouter()
     .patch('/api/v1/pets/:id', updatePet)
     .delete('/api/v1/pets/:id', deletePet)
     .post('/api/v1/uploads/signature', signUpload)
+    .get('/api/v1/admin/pets', adminListPets)
+    .patch('/api/v1/admin/pets/:id/moderation', moderatePet)
+    .use('/api/internal/outbox/process', processOutbox)
+    .use('/api/internal/images/cleanup', cleanUpImages)
 const handler = toWebHandler(createApp().use(router))
 
 const ADMIN_TOKEN = 'admin-token'
+const INTERNAL_TOKEN = 'internal-token'
 const IMAGE = 'https://storage.test/pets/1.jpg'
+
+const APPROVE = { isPetReport: 0.95, showsAnimal: 0.9, inappropriate: 0.01 }
+const REVIEW = { isPetReport: 0.5, showsAnimal: 0.9, inappropriate: 0.01 }
+const REJECT = { isPetReport: 0.05, showsAnimal: 0.1, inappropriate: 0.01 }
 
 async function call<T = unknown>(
     method: string,
     path: string,
     options: { body?: unknown; rawBody?: string; token?: string } = {}
-): Promise<{ status: number; body: T }> {
+): Promise<{ status: number; body: T; headers: Headers }> {
     const headers: Record<string, string> = { 'content-type': 'application/json' }
     if (options.token) headers.authorization = `Bearer ${options.token}`
     const response = await handler(
@@ -53,7 +70,7 @@ async function call<T = unknown>(
         })
     )
     const text = await response.text()
-    return { status: response.status, body: (text ? JSON.parse(text) : null) as T }
+    return { status: response.status, body: (text ? JSON.parse(text) : null) as T, headers: response.headers }
 }
 
 const report = (overrides: Partial<ReportPetRequest> = {}): ReportPetRequest => ({
@@ -75,20 +92,30 @@ async function createPet(overrides: Partial<ReportPetRequest> = {}): Promise<Pet
 }
 
 let describer: { describe: ReturnType<typeof vi.fn<PetDescriber['describe']>> }
+let moderator: { review: ReturnType<typeof vi.fn<ContentModerator['review']>> }
+let rateLimiter: { consume: ReturnType<typeof vi.fn<RateLimiter['consume']>> }
+let repository: InMemoryPetRepository
+let images: InMemoryImageStorage
 
 beforeEach(() => {
     let seconds = 0
+    const clock = { now: () => new Date(Date.UTC(2026, 9, 19, 10, 0, seconds++)) }
     describer = { describe: vi.fn<PetDescriber['describe']>().mockResolvedValue(null) }
+    moderator = { review: vi.fn<ContentModerator['review']>().mockResolvedValue(APPROVE) }
+    rateLimiter = { consume: vi.fn<RateLimiter['consume']>().mockResolvedValue({ allowed: true, retryAfterSeconds: 0 }) }
+    repository = new InMemoryPetRepository()
+    images = new InMemoryImageStorage()
+    processOutboxInBackground.mockReset()
     container = {
-        config: { adminToken: ADMIN_TOKEN },
+        config: { adminToken: ADMIN_TOKEN, internalToken: INTERNAL_TOKEN, cronSecret: undefined },
+        rateLimiter,
+        processOutbox: new ProcessOutbox(repository.outbox, new EventHandlerRegistry(), clock),
         pets: createPetsModule({
-            pets: new InMemoryPetRepository(),
-            images: {
-                isManagedUrl: url => url.startsWith('https://storage.test/pets/'),
-                authorizeUpload: () => ({ uploadUrl: 'https://storage.test/upload', fields: { signature: 'sig' } })
-            },
+            pets: repository,
+            images,
             describer,
-            clock: { now: () => new Date(Date.UTC(2026, 9, 19, 10, 0, seconds++)) },
+            moderator,
+            clock,
             ids: { next: () => randomUUID() }
         })
     }
@@ -98,8 +125,59 @@ describe('POST /api/v1/pets', () => {
     it('creates a pet and returns it with 201', async () => {
         const pet = await createPet()
 
-        expect(pet).toMatchObject({ reportType: 'lost', name: 'Rex', resolution: 'open', alive: true })
+        expect(pet).toMatchObject({
+            reportType: 'lost',
+            name: 'Rex',
+            resolution: 'open',
+            alive: true,
+            moderationStatus: 'approved'
+        })
         expect(pet).not.toHaveProperty('ownerId')
+        expect(pet).not.toHaveProperty('moderationScores')
+    })
+
+    it('processes the outbox after responding', async () => {
+        await createPet()
+
+        expect(processOutboxInBackground).toHaveBeenCalledOnce()
+    })
+
+    it('accepts uncertain reports but keeps them hidden', async () => {
+        moderator.review.mockResolvedValueOnce(REVIEW)
+        const pet = await createPet()
+
+        expect(pet.moderationStatus).toBe('pending_review')
+        expect((await call<PetPageDto>('GET', '/api/v1/pets')).body.items).toEqual([])
+        expect((await call('GET', `/api/v1/pets/${pet.id}`)).status).toBe(404)
+        expect((await call('GET', `/api/v1/pets/${pet.id}`, { token: ADMIN_TOKEN })).status).toBe(200)
+    })
+
+    it('rejects content that is not a pet report with 422 content_rejected', async () => {
+        moderator.review.mockResolvedValueOnce(REJECT)
+
+        const { status, body } = await call<ApiErrorDto>('POST', '/api/v1/pets', { body: report() })
+
+        expect(status).toBe(422)
+        expect(body.error.code).toBe('content_rejected')
+        expect(repository.outbox.pending()).toEqual([])
+        expect(images.deleted).toEqual([IMAGE])
+    })
+
+    it('returns 429 with Retry-After when over the rate limit', async () => {
+        rateLimiter.consume.mockResolvedValueOnce({ allowed: false, retryAfterSeconds: 42 })
+
+        const { status, body, headers } = await call<ApiErrorDto>('POST', '/api/v1/pets', { body: report() })
+
+        expect(status).toBe(429)
+        expect(body.error.code).toBe('rate_limited')
+        expect(headers.get('retry-after')).toBe('42')
+        expect(moderator.review).not.toHaveBeenCalled()
+    })
+
+    it('does not count invalid requests against the rate limit', async () => {
+        await call('POST', '/api/v1/pets', { body: { reportType: 'nope' } })
+
+        expect(rateLimiter.consume).not.toHaveBeenCalled()
     })
 
     it('returns 422 with the invalid fields', async () => {
@@ -144,7 +222,7 @@ describe('POST /api/v1/pets', () => {
 
 describe('GET /api/v1/pets', () => {
     it('returns an empty page', async () => {
-        expect(await call('GET', '/api/v1/pets')).toEqual({ status: 200, body: { items: [], nextCursor: null } })
+        expect(await call('GET', '/api/v1/pets')).toMatchObject({ status: 200, body: { items: [], nextCursor: null } })
     })
 
     it('filters by report type and text', async () => {
@@ -181,7 +259,7 @@ describe('GET /api/v1/pets/:id', () => {
     it('returns the pet', async () => {
         const pet = await createPet()
 
-        expect(await call('GET', `/api/v1/pets/${pet.id}`)).toEqual({ status: 200, body: pet })
+        expect(await call('GET', `/api/v1/pets/${pet.id}`)).toMatchObject({ status: 200, body: pet })
     })
 
     it.each([randomUUID(), 'not-a-uuid'])('returns 404 for unknown id %s', async id => {
@@ -254,8 +332,7 @@ describe('DELETE /api/v1/pets/:id', () => {
     it('deletes the pet with 204', async () => {
         const pet = await createPet()
 
-        expect(await call('DELETE', `/api/v1/pets/${pet.id}`, { token: ADMIN_TOKEN })).toEqual({
-            status: 204,
+        expect(await call('DELETE', `/api/v1/pets/${pet.id}`, { token: ADMIN_TOKEN })).toMatchObject({ status: 204,
             body: null
         })
         expect((await call('GET', `/api/v1/pets/${pet.id}`)).status).toBe(404)
@@ -288,6 +365,16 @@ describe('POST /api/v1/pets/describe', () => {
         expect(body).toMatchObject({ isPet: false })
     })
 
+    it('is rate limited', async () => {
+        rateLimiter.consume.mockResolvedValueOnce({ allowed: false, retryAfterSeconds: 60 })
+
+        const { status } = await call('POST', '/api/v1/pets/describe', { body: { image } })
+
+        expect(status).toBe(429)
+        expect(describer.describe).not.toHaveBeenCalled()
+        expect(rateLimiter.consume.mock.calls[0]![0]).toMatchObject({ name: 'describe' })
+    })
+
     it('validates the image before calling the model', async () => {
         const { status } = await call('POST', '/api/v1/pets/describe', { body: { image: 'https://img.test/a.jpg' } })
 
@@ -308,9 +395,113 @@ describe('POST /api/v1/pets/describe', () => {
 
 describe('POST /api/v1/uploads/signature', () => {
     it('returns the signed upload parameters', async () => {
-        expect(await call('POST', '/api/v1/uploads/signature')).toEqual({
-            status: 200,
+        expect(await call('POST', '/api/v1/uploads/signature')).toMatchObject({ status: 200,
             body: { uploadUrl: 'https://storage.test/upload', fields: { signature: 'sig' } }
         })
+    })
+})
+
+describe('admin moderation endpoints', () => {
+    const reportPending = async () => {
+        moderator.review.mockResolvedValueOnce(REVIEW)
+        return createPet()
+    }
+
+    it('lists pending reports for admins only', async () => {
+        await createPet()
+        const pending = await reportPending()
+
+        expect((await call('GET', '/api/v1/admin/pets')).status).toBe(403)
+        const { body } = await call<PetPageDto>('GET', '/api/v1/admin/pets', { token: ADMIN_TOKEN })
+        expect(body.items.map(p => p.id)).toEqual([pending.id])
+    })
+
+    it('filters by moderation status', async () => {
+        await createPet()
+        await reportPending()
+
+        const { body } = await call<PetPageDto>('GET', '/api/v1/admin/pets?moderationStatus=approved', {
+            token: ADMIN_TOKEN
+        })
+        expect(body.items).toHaveLength(1)
+    })
+
+    it('publishes a pending report', async () => {
+        const pending = await reportPending()
+        processOutboxInBackground.mockReset()
+
+        const { status, body } = await call<PetDto>('PATCH', `/api/v1/admin/pets/${pending.id}/moderation`, {
+            body: { status: 'approved' },
+            token: ADMIN_TOKEN
+        })
+
+        expect(status).toBe(200)
+        expect(body.moderationStatus).toBe('approved')
+        expect(processOutboxInBackground).toHaveBeenCalledOnce()
+        expect((await call('GET', `/api/v1/pets/${pending.id}`)).status).toBe(200)
+    })
+
+    it('rejects a pending report, deleting it and its images', async () => {
+        const pending = await reportPending()
+
+        const { status } = await call('PATCH', `/api/v1/admin/pets/${pending.id}/moderation`, {
+            body: { status: 'rejected' },
+            token: ADMIN_TOKEN
+        })
+
+        expect(status).toBe(204)
+        expect((await call('GET', `/api/v1/pets/${pending.id}`, { token: ADMIN_TOKEN })).status).toBe(404)
+        expect(images.deleted).toEqual([IMAGE])
+    })
+
+    it('requires the admin token and a valid status', async () => {
+        const pending = await reportPending()
+        const path = `/api/v1/admin/pets/${pending.id}/moderation`
+
+        expect((await call('PATCH', path, { body: { status: 'approved' } })).status).toBe(403)
+        expect((await call('PATCH', path, { body: { status: 'maybe' }, token: ADMIN_TOKEN })).status).toBe(422)
+    })
+})
+
+describe('internal endpoints', () => {
+    it.each(['/api/internal/outbox/process', '/api/internal/images/cleanup'])(
+        'reject calls without the internal token: %s',
+        async path => {
+            expect((await call('POST', path)).status).toBe(401)
+            expect((await call('POST', path, { token: ADMIN_TOKEN })).status).toBe(401)
+        }
+    )
+
+    it('processes pending outbox events', async () => {
+        await createPet()
+        await createPet()
+
+        const { status, body } = await call('POST', '/api/internal/outbox/process', { token: INTERNAL_TOKEN })
+
+        expect(status).toBe(200)
+        expect(body).toEqual({ processed: 2, failed: 0 })
+        expect(repository.outbox.pending()).toEqual([])
+    })
+
+    it('accepts Vercel Cron calls with CRON_SECRET', async () => {
+        container.config = { ...container.config, cronSecret: 'cron-secret' }
+
+        const { status } = await call('GET', '/api/internal/outbox/process', { token: 'cron-secret' })
+
+        expect(status).toBe(200)
+    })
+
+    it('is disabled when no internal token is configured', async () => {
+        container.config = { adminToken: ADMIN_TOKEN, internalToken: undefined, cronSecret: undefined }
+
+        expect((await call('POST', '/api/internal/outbox/process', { token: 'undefined' })).status).toBe(401)
+    })
+
+    it('cleans up orphan images', async () => {
+        images.upload('orphan.jpg', new Date('2026-01-01T00:00:00Z'))
+
+        const { body } = await call('POST', '/api/internal/images/cleanup', { token: INTERNAL_TOKEN })
+
+        expect(body).toEqual({ deleted: 1 })
     })
 })

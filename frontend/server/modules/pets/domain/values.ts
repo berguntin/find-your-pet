@@ -20,3 +20,7 @@ export const PET_LIMITS = {
     locationMaxLength: 120,
     contactMaxLength: 200
 } as const
+
+/** Only approved pets are public. Rejected reports are never stored. */
+export const MODERATION_STATUSES = ['approved', 'pending_review'] as const
+export type ModerationStatus = (typeof MODERATION_STATUSES)[number]

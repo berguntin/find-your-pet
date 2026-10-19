@@ -6,6 +6,8 @@
 > - La base de datos empieza vacía, así que la evaluación de embeddings no puede usar datos propios (ver 3.2).
 > - La indexación de embeddings va en segundo plano, a través de un outbox.
 
+> **Estado (19/10/2026):** los requisitos previos (sección 1) y la moderación (sección 2) están implementados en la rama `feat/moderation`. La búsqueda por imagen (sección 3) está pendiente.
+
 Dos funcionalidades:
 
 1. **Moderación automática** con la OpenAI Decisions API: comprueba que el texto y las imágenes de cada aviso corresponden a una mascota perdida o encontrada.

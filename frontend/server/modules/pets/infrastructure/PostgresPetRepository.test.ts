@@ -31,6 +31,7 @@ describe.skipIf(!url)('PostgresPetRepository', () => {
 
     beforeEach(async () => {
         await sql`delete from pets`
+        await sql`delete from outbox`
     })
 
     afterAll(async () => {
@@ -42,6 +43,46 @@ describe.skipIf(!url)('PostgresPetRepository', () => {
         await repository.save(pet)
 
         expect((await repository.findById(pet.id))?.toSnapshot()).toEqual(pet.toSnapshot())
+    })
+
+    it('saves moderation data', async () => {
+        const pet = report('00000000-0000-4000-8000-000000000001')
+        const scores = { isPetReport: 0.91, showsAnimal: 0.8, inappropriate: 0.02 }
+        pet.applyAutomaticModeration('approved', scores, new Date('2026-10-19T10:00:05Z'))
+        await repository.save(pet)
+
+        expect((await repository.findById(pet.id))?.toSnapshot()).toMatchObject({
+            moderationStatus: 'approved',
+            moderationScores: scores,
+            moderatedAt: new Date('2026-10-19T10:00:05Z')
+        })
+    })
+
+    it('stores recorded events in the outbox with the pet', async () => {
+        const pet = report('00000000-0000-4000-8000-000000000001')
+        pet.applyAutomaticModeration('approved', null, new Date('2026-10-19T10:00:05Z'))
+        await repository.save(pet)
+
+        const rows = await sql`select type, payload from outbox`
+        expect(rows.map(r => ({ ...r }))).toEqual([{ type: 'pet.published', payload: { petId: pet.id } }])
+    })
+
+    it('stores neither the pet nor its events if the save fails', async () => {
+        const pet = report('00000000-0000-4000-8000-000000000001')
+        pet.applyAutomaticModeration('approved', null, new Date('2026-10-19T10:00:05Z'))
+        // Break the row on purpose: the database rejects an empty image list.
+        ;(pet as unknown as { props: { images: string[] } }).props.images = []
+
+        await expect(repository.save(pet)).rejects.toThrow()
+        expect(await sql`select 1 from outbox`).toHaveLength(0)
+        expect(await repository.findById(pet.id)).toBeNull()
+    })
+
+    it('lists every referenced image once', async () => {
+        await repository.save(report('00000000-0000-4000-8000-000000000001'))
+        await repository.save(report('00000000-0000-4000-8000-000000000002', { images: ['https://img/1.jpg'] }))
+
+        expect((await repository.listAllImageUrls()).sort()).toEqual(['https://img/1.jpg', 'https://img/2.jpg'])
     })
 
     it('updates on save', async () => {
@@ -71,6 +112,7 @@ describe.skipIf(!url)('PostgresPetRepository', () => {
         const found = await repository.search({ limit: 10, reportType: 'found' })
         const byText = await repository.search({ limit: 10, query: 'paipor' })
         const literalPercent = await repository.search({ limit: 10, query: '100%' })
+        const approved = await repository.search({ limit: 10, moderationStatus: 'approved' })
 
         expect(first.items.map(p => p.id.at(-1))).toEqual(['3', '2'])
         expect(second.items.map(p => p.id.at(-1))).toEqual(['1'])
@@ -78,5 +120,6 @@ describe.skipIf(!url)('PostgresPetRepository', () => {
         expect(found.items.map(p => p.id.at(-1))).toEqual(['2'])
         expect(byText.items.map(p => p.id.at(-1))).toEqual(['3'])
         expect(literalPercent.items.map(p => p.id.at(-1))).toEqual(['1'])
+        expect(approved.items).toEqual([])
     })
 })

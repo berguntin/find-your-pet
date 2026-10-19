@@ -39,7 +39,7 @@ const responseSchema = z.object({
 /** The slice of the OpenAI SDK this adapter uses, so tests can replace it. */
 export type ChatCompletionsClient = Pick<OpenAI, 'chat'>
 
-export function createOpenAIClient(apiKey: string): ChatCompletionsClient {
+export function createOpenAIClient(apiKey: string): OpenAI {
     return new OpenAI({ apiKey, timeout: 20_000, maxRetries: 1 })
 }
 

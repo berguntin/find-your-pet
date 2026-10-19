@@ -97,3 +97,71 @@ describe('Pet management', () => {
         expect(() => pet.markAsReunited({ kind: 'admin' }, now)).toThrow(ConflictError)
     })
 })
+
+describe('Pet moderation and events', () => {
+    const scores = { isPetReport: 0.9, showsAnimal: 0.9, inappropriate: 0 }
+
+    it('starts pending review, unpublished and without events', () => {
+        const pet = report()
+
+        expect(pet.isPublic).toBe(false)
+        expect(pet.toSnapshot()).toMatchObject({ moderationStatus: 'pending_review', moderatedAt: null })
+        expect(pet.pullEvents()).toEqual([])
+    })
+
+    it('publishes on automatic approval', () => {
+        const pet = report()
+        pet.applyAutomaticModeration('approved', scores, now)
+
+        expect(pet.isPublic).toBe(true)
+        expect(pet.toSnapshot()).toMatchObject({ moderationScores: scores, moderatedAt: now })
+        expect(pet.pullEvents()).toEqual([{ type: 'pet.published', occurredAt: now, payload: { petId: 'pet-1' } }])
+    })
+
+    it('stays hidden and silent when left for review', () => {
+        const pet = report()
+        pet.applyAutomaticModeration('pending_review', null, now)
+
+        expect(pet.isPublic).toBe(false)
+        expect(pet.pullEvents()).toEqual([])
+    })
+
+    it('is moderated automatically only once', () => {
+        const pet = report()
+        pet.applyAutomaticModeration('pending_review', null, now)
+
+        expect(() => pet.applyAutomaticModeration('approved', scores, now)).toThrow(ConflictError)
+    })
+
+    it('lets only admins approve a pending pet', () => {
+        const pet = report({}, 'user-1')
+        pet.applyAutomaticModeration('pending_review', null, now)
+
+        expect(() => pet.approve({ kind: 'user', userId: 'user-1' }, now)).toThrow(ForbiddenError)
+        pet.approve({ kind: 'admin' }, now)
+        expect(pet.isPublic).toBe(true)
+        expect(pet.pullEvents().map(e => e.type)).toEqual(['pet.published'])
+    })
+
+    it('cannot approve a published pet again', () => {
+        const pet = report()
+        pet.applyAutomaticModeration('approved', scores, now)
+
+        expect(() => pet.approve({ kind: 'admin' }, now)).toThrow(ConflictError)
+    })
+
+    it('records an event when reunited, and pulling clears events', () => {
+        const pet = report()
+        pet.markAsReunited({ kind: 'admin' }, now)
+
+        expect(pet.pullEvents().map(e => e.type)).toEqual(['pet.reunited'])
+        expect(pet.pullEvents()).toEqual([])
+    })
+
+    it('restores without pending events', () => {
+        const pet = report()
+        pet.markAsReunited({ kind: 'admin' }, now)
+
+        expect(Pet.restore(pet.toSnapshot()).pullEvents()).toEqual([])
+    })
+})
