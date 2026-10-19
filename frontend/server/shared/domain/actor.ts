@@ -3,5 +3,3 @@
  * requires being its owner (once login exists) or an admin.
  */
 export type Actor = { kind: 'anonymous' } | { kind: 'admin' } | { kind: 'user'; userId: string }
-
-export const anonymous: Actor = { kind: 'anonymous' }

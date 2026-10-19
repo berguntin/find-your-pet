@@ -17,6 +17,7 @@
         "lint": "eslint .",
         "test": "vitest run",
         "test:watch": "vitest",
+        "test:coverage": "vitest run --coverage",
         "db:migrate": "dbmate --env NUXT_DATABASE_URL --migrations-dir server/db/migrations --no-dump-schema --wait up",
         "db:rollback": "dbmate --env NUXT_DATABASE_URL --migrations-dir server/db/migrations --no-dump-schema rollback",
         "db:new": "dbmate --migrations-dir server/db/migrations new"
@@ -31,6 +32,8 @@
         "@vercel/speed-insights": "^1.1.0",
         "@vueuse/head": "2.0.0",
         "cloudinary": "^2.11.0",
+        "consola": "^3.4.2",
+        "h3": "^1.15.11",
         "lucide-vue-next": "0.456.0",
         "nuxt": "3.14.159",
         "nuxt-swiper": "1.2.2",
@@ -43,6 +46,7 @@
     "devDependencies": {
         "@nuxt/eslint-config": "^0.7.6",
         "@nuxtjs/i18n": "^9.0.0",
+        "@vitest/coverage-v8": "^2.1.9",
         "daisyui": "^4.12.14",
         "dbmate": "^2.37.0",
         "eslint": "^9.39.5",

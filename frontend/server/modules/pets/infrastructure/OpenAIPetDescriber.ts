@@ -36,15 +36,18 @@ const responseSchema = z.object({
         .catch(null)
 })
 
-export class OpenAIPetDescriber implements PetDescriber {
-    private readonly client: OpenAI
+/** The slice of the OpenAI SDK this adapter uses, so tests can replace it. */
+export type ChatCompletionsClient = Pick<OpenAI, 'chat'>
 
+export function createOpenAIClient(apiKey: string): ChatCompletionsClient {
+    return new OpenAI({ apiKey, timeout: 20_000, maxRetries: 1 })
+}
+
+export class OpenAIPetDescriber implements PetDescriber {
     constructor(
-        apiKey: string,
+        private readonly client: ChatCompletionsClient,
         private readonly model: string
-    ) {
-        this.client = new OpenAI({ apiKey, timeout: 20_000, maxRetries: 1 })
-    }
+    ) {}
 
     async describe(imageDataUrl: string): Promise<PetDescription | null> {
         const completion = await this.client.chat.completions.create({

@@ -35,5 +35,5 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run db:migrate
-      - run: npm test
+      - run: npm run test:coverage
       - run: npm run build

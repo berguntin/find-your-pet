@@ -25,6 +25,10 @@ frontend/
 
 `domain/` and `application/` cannot import Nuxt, h3 or infrastructure; ESLint enforces it.
 
+Tests live next to the code they cover (`*.test.ts`). HTTP tests in `server/test/` run the real
+handlers through h3 with in-memory adapters; they are kept out of `server/api/` so Nitro does not
+serve them as routes.
+
 ## API
 
 | Method | Path | Notes |
@@ -58,7 +62,8 @@ Without Docker, from `frontend/`: start a Postgres, set `NUXT_DATABASE_URL`, the
 | Script | |
 |---|---|
 | `npm run dev` / `build` | Nuxt dev server / production build |
-| `npm test` | Unit tests; Postgres integration tests also run when `TEST_DATABASE_URL` points to a migrated, disposable database |
+| `npm test` | Unit, HTTP and composable tests; Postgres integration tests also run when `TEST_DATABASE_URL` points to a migrated, disposable database |
+| `npm run test:coverage` | Same, with coverage. Thresholds (90% lines, 85% branches) apply when `TEST_DATABASE_URL` is set, as in CI |
 | `npm run lint` / `typecheck` | ESLint (including layer boundaries) / vue-tsc |
 | `npm run db:migrate` / `db:rollback` / `db:new <name>` | dbmate migrations in `server/db/migrations` |
 
