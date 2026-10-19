@@ -7,7 +7,7 @@ import { consola } from 'consola'
 import { useRuntimeConfig } from '#imports'
 import { EventHandlerRegistry, ProcessOutbox } from './shared/application/outbox'
 import type { RateLimiter } from './shared/application/rateLimit'
-import { parseServerConfig, type ServerConfig } from './shared/infrastructure/config'
+import { parseServerConfig, withRawSecrets, type ServerConfig } from './shared/infrastructure/config'
 import { runInBackground } from './shared/infrastructure/background'
 import { createDatabase } from './shared/infrastructure/database'
 import { PostgresOutboxStore } from './shared/infrastructure/PostgresOutboxStore'
@@ -33,16 +33,7 @@ export interface Container {
 }
 
 function buildContainer(): Container {
-    const runtimeConfig = useRuntimeConfig()
-    const config = parseServerConfig({
-        ...runtimeConfig,
-        cronSecret: process.env.CRON_SECRET,
-        // Also accept the variable names the Upstash integration for Vercel creates.
-        upstash: {
-            url: runtimeConfig.upstash.url || process.env.UPSTASH_REDIS_REST_URL,
-            token: runtimeConfig.upstash.token || process.env.UPSTASH_REDIS_REST_TOKEN
-        }
-    })
+    const config = parseServerConfig(withRawSecrets(useRuntimeConfig(), process.env))
 
     const clock = { now: () => new Date() }
     const sql = createDatabase(config.databaseUrl)

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseServerConfig } from './config'
+import { parseServerConfig, withRawSecrets } from './config'
 
 const runtimeConfig = (overrides: Record<string, unknown> = {}) => ({
     databaseUrl: 'postgres://localhost/pets',
@@ -49,5 +49,70 @@ describe('parseServerConfig', () => {
         expect(parse).toThrow(/NUXT_DATABASE_URL/)
         expect(parse).toThrow(/NUXT_CLOUDINARY_CLOUD_NAME/)
         expect(parse).toThrow(/NUXT_CLOUDINARY_API_SECRET/)
+    })
+})
+
+describe('numeric values', () => {
+    it('accepts secrets that Nuxt parsed as numbers', () => {
+        const config = parseServerConfig(
+            runtimeConfig({ cloudinary: { cloudName: 'cloud', apiKey: 123456789012345, apiSecret: 'secret' } })
+        )
+
+        expect(config.cloudinary.apiKey).toBe('123456789012345')
+    })
+
+    it('accepts numeric optional values too', () => {
+        expect(parseServerConfig(runtimeConfig({ adminToken: 42 })).adminToken).toBe('42')
+    })
+})
+
+describe('withRawSecrets', () => {
+    it('reads secrets exactly as written in the environment', () => {
+        // Nuxt would have turned this into 9007199254740992, losing the last digit.
+        const raw = withRawSecrets(
+            runtimeConfig({ cloudinary: { cloudName: 'cloud', apiKey: 9007199254740992, apiSecret: 'secret' } }),
+            {
+                NUXT_CLOUDINARY_API_KEY: '9007199254740993',
+                NUXT_ADMIN_TOKEN: '000123'
+            }
+        )
+
+        const config = parseServerConfig(raw)
+        expect(config.cloudinary.apiKey).toBe('9007199254740993')
+        expect(config.adminToken).toBe('000123')
+        expect(config.cloudinary.apiSecret).toBe('secret')
+    })
+
+    it('keeps runtime config values that are not in the environment', () => {
+        const config = parseServerConfig(withRawSecrets(runtimeConfig(), {}))
+
+        expect(config.cloudinary).toMatchObject({ cloudName: 'cloud', apiKey: 'key', apiSecret: 'secret' })
+        expect(config.databaseUrl).toBe('postgres://localhost/pets')
+    })
+
+    it('reads CRON_SECRET and the Upstash integration variables', () => {
+        const config = parseServerConfig(
+            withRawSecrets(runtimeConfig(), {
+                CRON_SECRET: 'cron',
+                UPSTASH_REDIS_REST_URL: 'https://redis.test',
+                UPSTASH_REDIS_REST_TOKEN: 'redis-token'
+            })
+        )
+
+        expect(config.cronSecret).toBe('cron')
+        expect(config.upstash).toEqual({ url: 'https://redis.test', token: 'redis-token' })
+    })
+
+    it('prefers NUXT_UPSTASH_* over the integration variables', () => {
+        const config = parseServerConfig(
+            withRawSecrets(runtimeConfig(), {
+                NUXT_UPSTASH_URL: 'https://mine.test',
+                NUXT_UPSTASH_TOKEN: 'mine',
+                UPSTASH_REDIS_REST_URL: 'https://integration.test',
+                UPSTASH_REDIS_REST_TOKEN: 'integration'
+            })
+        )
+
+        expect(config.upstash).toEqual({ url: 'https://mine.test', token: 'mine' })
     })
 })

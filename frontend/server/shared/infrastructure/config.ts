@@ -1,11 +1,51 @@
 import { z } from 'zod'
 
-const required = (name: string) => z.string({ required_error: `${name} is not set` }).min(1, `${name} is not set`)
+// Nuxt parses NUXT_* values, so an all-digit secret (like a Cloudinary API key) can arrive as a number.
+const text = (name: string) =>
+    z.union([z.string(), z.number()], { required_error: `${name} is not set` }).transform(value => String(value))
+const required = (name: string) => text(name).pipe(z.string().min(1, `${name} is not set`))
 const optional = () =>
     z
-        .string()
+        .union([z.string(), z.number()])
         .optional()
-        .transform(value => value || undefined)
+        .transform(value => (value === undefined || value === '' ? undefined : String(value)))
+
+/**
+ * Secrets and identifiers read exactly as written in the environment. Nuxt's runtime config parses
+ * NUXT_* values: digits become numbers, which loses precision past 2^53 and would corrupt long tokens.
+ * Values not set in the environment keep the runtime config ones.
+ */
+type Section = Record<string, unknown>
+type RuntimeConfigInput = Record<string, unknown> & { cloudinary?: Section; openai?: Section; upstash?: Section }
+
+export function withRawSecrets(
+    runtimeConfig: RuntimeConfigInput,
+    env: Record<string, string | undefined>
+): Record<string, unknown> {
+    const raw = (name: string, fallback: unknown) => env[name] ?? fallback
+    return {
+        ...runtimeConfig,
+        databaseUrl: raw('NUXT_DATABASE_URL', runtimeConfig.databaseUrl),
+        adminToken: raw('NUXT_ADMIN_TOKEN', runtimeConfig.adminToken),
+        internalToken: raw('NUXT_INTERNAL_TOKEN', runtimeConfig.internalToken),
+        cronSecret: env.CRON_SECRET,
+        cloudinary: {
+            ...runtimeConfig.cloudinary,
+            cloudName: raw('NUXT_CLOUDINARY_CLOUD_NAME', runtimeConfig.cloudinary?.cloudName),
+            apiKey: raw('NUXT_CLOUDINARY_API_KEY', runtimeConfig.cloudinary?.apiKey),
+            apiSecret: raw('NUXT_CLOUDINARY_API_SECRET', runtimeConfig.cloudinary?.apiSecret)
+        },
+        openai: {
+            ...runtimeConfig.openai,
+            apiKey: raw('NUXT_OPENAI_API_KEY', runtimeConfig.openai?.apiKey)
+        },
+        // Also accept the variable names the Upstash integration for Vercel creates.
+        upstash: {
+            url: raw('NUXT_UPSTASH_URL', runtimeConfig.upstash?.url) || env.UPSTASH_REDIS_REST_URL,
+            token: raw('NUXT_UPSTASH_TOKEN', runtimeConfig.upstash?.token) || env.UPSTASH_REDIS_REST_TOKEN
+        }
+    }
+}
 
 const configSchema = z.object({
     databaseUrl: required('NUXT_DATABASE_URL'),
