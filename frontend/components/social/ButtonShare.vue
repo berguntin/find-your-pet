@@ -10,7 +10,7 @@
         },
         className: {
             type: String,
-            default: ''
+            default: 'btn-primary'
         }
     })
     const isActive = ref(false)
@@ -35,6 +35,21 @@
         }
     ]
 
+    const options = useMetadata(props.pet)
+
+    // On phones, the native share sheet reaches every app; the popup is the fallback.
+    const share = async () => {
+        if (navigator.share) {
+            try {
+                await navigator.share({ title: options.title, text: options.text, url: options.url })
+                return
+            } catch (error) {
+                if (error?.name === 'AbortError') return
+            }
+        }
+        togglePopup()
+    }
+
     const togglePopup = () => {
         isActive.value = !isActive.value
         if (isActive.value) {
@@ -43,32 +58,24 @@
             document.body.style.overflow = ''
         }
     }
-
-
-
-
-    const options = useMetadata(props.pet)
 </script>
 
 <template>
     <div>
         <button
             ref="buttonRef"
-            :class="['btn btn-primary flex items-center gap-1 px-2 py-1', className]"
-            @click="togglePopup"
-            aria-label="Compartir en redes"
+            :class="['btn', className]"
+            :aria-label="$t('share')"
             aria-haspopup="true"
             :aria-expanded="isActive.toString()"
+            @click="share"
         >
-            <Icon name="material-symbols:share" size="1.5rem" />
-            <span v-if="!onlyIcon">Compartir</span>
+            <Icon name="mdi:share-variant" size="1.25rem" />
+            <span v-if="!onlyIcon">{{ $t('share') }}</span>
         </button>
         <Teleport to="body">
             <transition name="fade">
-                <div
-                    v-if="isActive"
-                    class="fixed inset-0 z-50 flex items-center justify-center bg-base-300 bg-opacity-50"
-                >
+                <div v-if="isActive" class="fixed inset-0 z-50 flex items-center justify-center bg-neutral/40">
                     <div
                         ref="popupRef"
                         class="bg-base-100 border border-base-content/20 text-base-content shadow-xl rounded-lg p-8 max-w-sm w-full mx-4 relative"
@@ -78,7 +85,7 @@
                         <button
                             @click="togglePopup"
                             class="absolute top-1 right-2 text-base-content/70 hover:text-base-content focus:outline-none focus:ring-2 focus:ring-base-content/20 rounded-full p-1 transition-colors duration-200"
-                            aria-label="Cerrar"
+                            :aria-label="$t('close')"
                         >
                             <Icon name="material-symbols:close" />
                         </button>
