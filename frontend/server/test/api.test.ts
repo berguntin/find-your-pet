@@ -6,11 +6,15 @@
 import { randomUUID } from 'node:crypto'
 import { createApp, createRouter, toWebHandler } from 'h3'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { ApiErrorDto, PetDto, PetPageDto, ReportPetRequest } from '../../contracts/pets'
+import type { ApiErrorDto, PetDto, PetMatchListDto, PetPageDto, ReportPetRequest } from '../../contracts/pets'
 import type { Container } from '../container'
 import { createPetsModule } from '../modules/pets'
+import { petSearchText } from '../modules/pets/application/search'
 import type { ContentModerator, PetDescriber } from '../modules/pets/application/ports'
+import { FakeEmbedder } from '../modules/pets/infrastructure/FakeEmbedder'
+import { UnavailableEmbedder } from '../modules/pets/infrastructure/GeminiEmbedder'
 import { InMemoryImageStorage } from '../modules/pets/infrastructure/InMemoryImageStorage'
+import { InMemoryPetEmbeddingIndex } from '../modules/pets/infrastructure/InMemoryPetEmbeddingIndex'
 import { InMemoryPetRepository } from '../modules/pets/infrastructure/InMemoryPetRepository'
 import { EventHandlerRegistry, ProcessOutbox } from '../shared/application/outbox'
 import type { RateLimiter } from '../shared/application/rateLimit'
@@ -27,6 +31,7 @@ const { default: getPet } = await import('../api/v1/pets/[id].get')
 const { default: updatePet } = await import('../api/v1/pets/[id].patch')
 const { default: deletePet } = await import('../api/v1/pets/[id].delete')
 const { default: describePet } = await import('../api/v1/pets/describe.post')
+const { default: searchByImage } = await import('../api/v1/pets/search-by-image.post')
 const { default: signUpload } = await import('../api/v1/uploads/signature.post')
 const { default: adminListPets } = await import('../api/v1/admin/pets/index.get')
 const { default: moderatePet } = await import('../api/v1/admin/pets/[id]/moderation.patch')
@@ -37,6 +42,7 @@ const router = createRouter()
     .get('/api/v1/pets', listPets)
     .post('/api/v1/pets', reportPet)
     .post('/api/v1/pets/describe', describePet)
+    .post('/api/v1/pets/search-by-image', searchByImage)
     .get('/api/v1/pets/:id', getPet)
     .patch('/api/v1/pets/:id', updatePet)
     .delete('/api/v1/pets/:id', deletePet)
@@ -96,28 +102,42 @@ let moderator: { review: ReturnType<typeof vi.fn<ContentModerator['review']>> }
 let rateLimiter: { consume: ReturnType<typeof vi.fn<RateLimiter['consume']>> }
 let repository: InMemoryPetRepository
 let images: InMemoryImageStorage
+let embedder: FakeEmbedder
+let embeddingIndex: InMemoryPetEmbeddingIndex
+let buildPets: (overrides?: { embedder?: FakeEmbedder | UnavailableEmbedder }) => Container['pets']
 
 beforeEach(() => {
     let seconds = 0
     const clock = { now: () => new Date(Date.UTC(2026, 9, 19, 10, 0, seconds++)) }
     describer = { describe: vi.fn<PetDescriber['describe']>().mockResolvedValue(null) }
     moderator = { review: vi.fn<ContentModerator['review']>().mockResolvedValue(APPROVE) }
-    rateLimiter = { consume: vi.fn<RateLimiter['consume']>().mockResolvedValue({ allowed: true, retryAfterSeconds: 0 }) }
+    rateLimiter = {
+        consume: vi.fn<RateLimiter['consume']>().mockResolvedValue({ allowed: true, retryAfterSeconds: 0 })
+    }
     repository = new InMemoryPetRepository()
     images = new InMemoryImageStorage()
+    embedder = new FakeEmbedder()
+    // Anything a test does not register embeds far from every query.
+    embedder.fallback = [0, -1]
+    embeddingIndex = new InMemoryPetEmbeddingIndex()
     processOutboxInBackground.mockReset()
-    container = {
-        config: { adminToken: ADMIN_TOKEN, internalToken: INTERNAL_TOKEN, cronSecret: undefined },
-        rateLimiter,
-        processOutbox: new ProcessOutbox(repository.outbox, new EventHandlerRegistry(), clock),
-        pets: createPetsModule({
+    buildPets = (overrides = {}) =>
+        createPetsModule({
             pets: repository,
             images,
             describer,
             moderator,
+            embedder: overrides.embedder ?? embedder,
+            embeddingIndex,
+            matchCalibration: { floor: 0.9, ceiling: 1 },
             clock,
             ids: { next: () => randomUUID() }
         })
+    container = {
+        config: { adminToken: ADMIN_TOKEN, internalToken: INTERNAL_TOKEN, cronSecret: undefined },
+        rateLimiter,
+        processOutbox: new ProcessOutbox(repository.outbox, new EventHandlerRegistry(), clock),
+        pets: buildPets()
     }
 })
 
@@ -332,7 +352,8 @@ describe('DELETE /api/v1/pets/:id', () => {
     it('deletes the pet with 204', async () => {
         const pet = await createPet()
 
-        expect(await call('DELETE', `/api/v1/pets/${pet.id}`, { token: ADMIN_TOKEN })).toMatchObject({ status: 204,
+        expect(await call('DELETE', `/api/v1/pets/${pet.id}`, { token: ADMIN_TOKEN })).toMatchObject({
+            status: 204,
             body: null
         })
         expect((await call('GET', `/api/v1/pets/${pet.id}`)).status).toBe(404)
@@ -395,7 +416,8 @@ describe('POST /api/v1/pets/describe', () => {
 
 describe('POST /api/v1/uploads/signature', () => {
     it('returns the signed upload parameters', async () => {
-        expect(await call('POST', '/api/v1/uploads/signature')).toMatchObject({ status: 200,
+        expect(await call('POST', '/api/v1/uploads/signature')).toMatchObject({
+            status: 200,
             body: { uploadUrl: 'https://storage.test/upload', fields: { signature: 'sig' } }
         })
     })
@@ -503,5 +525,97 @@ describe('internal endpoints', () => {
         const { body } = await call('POST', '/api/internal/images/cleanup', { token: INTERNAL_TOKEN })
 
         expect(body).toEqual({ deleted: 1 })
+    })
+})
+
+describe('POST /api/v1/pets/search-by-image', () => {
+    const photo = `data:image/jpeg;base64,${Buffer.from('my-dog').toString('base64')}`
+
+    it('returns similar public pets with their match percentage', async () => {
+        const pet = await createPet()
+        embedder.register(images.previewUrl(IMAGE, 512), [1, 0]).register('my-dog', [1, 0])
+        await container.pets.indexForSearch.execute(pet.id)
+
+        const { status, body } = await call<PetMatchListDto>('POST', '/api/v1/pets/search-by-image', {
+            body: { image: photo }
+        })
+
+        expect(status).toBe(200)
+        expect(body.items).toEqual([{ pet: expect.objectContaining({ id: pet.id }), match: 100 }])
+        expect(embedder.calls.at(-1)).toEqual([{ kind: 'bytes', mimeType: 'image/jpeg', data: Buffer.from('my-dog') }])
+    })
+
+    it('returns an empty list when nothing looks alike', async () => {
+        embedder.register('my-dog', [1, 0])
+
+        const { body } = await call('POST', '/api/v1/pets/search-by-image', { body: { image: photo } })
+
+        expect(body).toEqual({ items: [] })
+    })
+
+    it('validates the photo', async () => {
+        expect((await call('POST', '/api/v1/pets/search-by-image', { body: { image: 'nope' } })).status).toBe(422)
+    })
+
+    it('is rate limited', async () => {
+        rateLimiter.consume.mockResolvedValueOnce({ allowed: false, retryAfterSeconds: 30 })
+
+        const { status } = await call('POST', '/api/v1/pets/search-by-image', { body: { image: photo } })
+
+        expect(status).toBe(429)
+        expect(rateLimiter.consume.mock.calls[0]![0]).toMatchObject({ name: 'search-by-image' })
+    })
+
+    it('answers 503 when image search is not configured', async () => {
+        container.pets = buildPets({ embedder: new UnavailableEmbedder() })
+
+        const { status, body } = await call<ApiErrorDto>('POST', '/api/v1/pets/search-by-image', {
+            body: { image: photo }
+        })
+
+        expect(status).toBe(503)
+        expect(body.error.code).toBe('unavailable')
+    })
+})
+
+describe('GET /api/v1/pets?q= (semantic search)', () => {
+    const reportAndIndex = async (description: string, textVector: number[]) => {
+        const pet = await createPet({ description })
+        embedder.register(images.previewUrl(IMAGE, 512), [0, -1])
+        embedder.register(petSearchText((await repository.findById(pet.id))!.toSnapshot()), textVector)
+        await container.pets.indexForSearch.execute(pet.id)
+        return pet
+    }
+
+    it('returns keyword hits first and then pets that mean the same', async () => {
+        const semantic = await reportAndIndex('Mestizo de pelo oscuro', [1, 0])
+        const keyword = await reportAndIndex('Perro negro con collar', [1, 0])
+        await reportAndIndex('Gato blanco', [0, 1])
+        embedder.register('perro negro', [1, 0])
+
+        const { status, body } = await call<PetPageDto>('GET', `/api/v1/pets?q=${encodeURIComponent('perro negro')}`)
+
+        expect(status).toBe(200)
+        expect(body.items.map(p => p.id)).toEqual([keyword.id, semantic.id])
+        expect(body.nextCursor).toBeNull()
+        expect(rateLimiter.consume.mock.calls.at(-1)![0]).toMatchObject({ name: 'semantic-search' })
+    })
+
+    it('falls back to keywords instead of failing when over the semantic rate limit', async () => {
+        await reportAndIndex('Mestizo de pelo oscuro', [1, 0])
+        const keyword = await reportAndIndex('Perro negro con collar', [1, 0])
+        embedder.register('perro negro', [1, 0])
+        rateLimiter.consume.mockResolvedValueOnce({ allowed: false, retryAfterSeconds: 60 })
+
+        const { status, body } = await call<PetPageDto>('GET', `/api/v1/pets?q=${encodeURIComponent('perro negro')}`)
+
+        expect(status).toBe(200)
+        expect(body.items.map(p => p.id)).toEqual([keyword.id])
+    })
+
+    it('does not count listings without a query against the semantic rate limit', async () => {
+        await call('GET', '/api/v1/pets')
+
+        expect(rateLimiter.consume).not.toHaveBeenCalled()
     })
 })

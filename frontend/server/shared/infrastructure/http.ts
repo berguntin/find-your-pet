@@ -14,6 +14,9 @@ import type { ApiErrorDto } from '../../../contracts/pets'
 import type { RateLimiter, RateLimitPolicy } from '../application/rateLimit'
 import type { Actor } from '../domain/actor'
 import { DomainError, ValidationError, type DomainErrorCode } from '../domain/errors'
+import { RateLimitedError, ServiceUnavailableError, UnauthorizedError } from './errors'
+
+export { RateLimitedError, ServiceUnavailableError, UnauthorizedError }
 
 const STATUS_BY_CODE: Record<DomainErrorCode, number> = {
     validation: 422,
@@ -21,19 +24,6 @@ const STATUS_BY_CODE: Record<DomainErrorCode, number> = {
     not_found: 404,
     forbidden: 403,
     conflict: 409
-}
-
-/** HTTP-only errors: they are not part of the domain. */
-export class RateLimitedError extends Error {
-    constructor(readonly retryAfterSeconds: number) {
-        super('Too many requests, please try again later')
-    }
-}
-
-export class UnauthorizedError extends Error {
-    constructor() {
-        super('Missing or invalid credentials')
-    }
 }
 
 /**
@@ -73,9 +63,21 @@ export function requireBearerToken(event: H3Event, tokens: (string | undefined)[
 
 /** Counts the request against `policy` for the client IP and rejects it with 429 when over the limit. */
 export async function enforceRateLimit(event: H3Event, limiter: RateLimiter, policy: RateLimitPolicy): Promise<void> {
-    const ip = getRequestIP(event, { xForwardedFor: true }) ?? 'unknown'
-    const { allowed, retryAfterSeconds } = await limiter.consume(policy, ip)
+    const { allowed, retryAfterSeconds } = await limiter.consume(policy, clientIp(event))
     if (!allowed) throw new RateLimitedError(retryAfterSeconds)
+}
+
+/** Counts the request against `policy`; for optional, costly extras the caller can skip when over the limit. */
+export async function isWithinRateLimit(
+    event: H3Event,
+    limiter: RateLimiter,
+    policy: RateLimitPolicy
+): Promise<boolean> {
+    return (await limiter.consume(policy, clientIp(event))).allowed
+}
+
+function clientIp(event: H3Event): string {
+    return getRequestIP(event, { xForwardedFor: true }) ?? 'unknown'
 }
 
 function hasBearerToken(event: H3Event, expected: string): boolean {
@@ -97,6 +99,10 @@ function toErrorResponse(event: H3Event, error: unknown): ApiErrorDto {
     if (error instanceof UnauthorizedError) {
         setResponseStatus(event, 401)
         return { error: { code: 'unauthorized', message: error.message } }
+    }
+    if (error instanceof ServiceUnavailableError) {
+        setResponseStatus(event, 503)
+        return { error: { code: 'unavailable', message: error.message } }
     }
     // Errors raised by h3 itself, such as a malformed JSON body.
     if (isError(error) && error.statusCode < 500) {

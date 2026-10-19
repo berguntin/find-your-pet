@@ -4,7 +4,9 @@ import { ContentRejectedError, ForbiddenError, NotFoundError, ValidationError } 
 import type { ModerationScores } from '../domain/moderation'
 import type { ReportPetData } from '../domain/Pet'
 import { createPetsModule, type PetsModule } from '../index'
+import { FakeEmbedder } from '../infrastructure/FakeEmbedder'
 import { InMemoryImageStorage } from '../infrastructure/InMemoryImageStorage'
+import { InMemoryPetEmbeddingIndex } from '../infrastructure/InMemoryPetEmbeddingIndex'
 import { InMemoryPetRepository } from '../infrastructure/InMemoryPetRepository'
 import type { ContentModerator } from './ports'
 
@@ -54,6 +56,8 @@ describe('pet use cases', () => {
             images,
             describer: { describe: vi.fn().mockResolvedValue(null) },
             moderator,
+            embedder: new FakeEmbedder(),
+            embeddingIndex: new InMemoryPetEmbeddingIndex(),
             clock: { now: () => new Date(now.getTime() + 1000 * seconds++) },
             ids: { next: () => `pet-${++counter}` },
             reportError
@@ -145,9 +149,9 @@ describe('pet use cases', () => {
             await reportApproved({ reportType: 'found', description: 'segundo' })
             await reportApproved({ description: 'tercero' })
 
-            const first = await pets.list.execute({ limit: 2 })
-            const second = await pets.list.execute({ limit: 2, cursor: first.nextCursor! })
-            const lost = await pets.list.execute({ limit: 10, reportType: 'lost' })
+            const first = await pets.search.execute({ limit: 2 }, { semantic: false })
+            const second = await pets.search.execute({ limit: 2, cursor: first.nextCursor! }, { semantic: false })
+            const lost = await pets.search.execute({ limit: 10, reportType: 'lost' }, { semantic: false })
 
             expect(first.items.map(p => p.toSnapshot().description)).toEqual(['tercero', 'segundo'])
             expect(second.items.map(p => p.toSnapshot().description)).toEqual(['primero'])

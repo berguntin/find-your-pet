@@ -44,10 +44,7 @@ export function createOpenAIClient(apiKey: string): OpenAI {
 }
 
 export class OpenAIPetDescriber implements PetDescriber {
-    constructor(
-        private readonly client: ChatCompletionsClient,
-        private readonly model: string
-    ) {}
+    constructor(private readonly client: ChatCompletionsClient, private readonly model: string) {}
 
     async describe(imageDataUrl: string): Promise<PetDescription | null> {
         const completion = await this.client.chat.completions.create({

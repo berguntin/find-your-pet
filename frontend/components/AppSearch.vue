@@ -1,7 +1,8 @@
 <script setup>
     const searchQuery = ref('')
-    const emits = defineEmits(['updateQuery'])
+    const emits = defineEmits(['updateQuery', 'searchByImage'])
     const timeout = ref(null)
+    const fileInput = ref(null)
 
     const handleSearch = () => {
         clearTimeout(timeout.value)
@@ -14,11 +15,18 @@
         searchQuery.value = ''
         emits('updateQuery', '')
     }
+
+    const handleImage = event => {
+        const [file] = event.target.files ?? []
+        if (file) emits('searchByImage', file)
+        // Allow picking the same photo again.
+        event.target.value = ''
+    }
 </script>
 
 <template>
-    <div class="max-w-2xl mx-auto p-4">
-        <div class="relative">
+    <div class="max-w-2xl mx-auto p-4 flex items-center gap-2">
+        <div class="relative flex-1">
             <input
                 type="text"
                 v-model="searchQuery"
@@ -37,5 +45,15 @@
                 <Icon name="material-symbols:close" />
             </button>
         </div>
+        <button
+            type="button"
+            class="btn btn-circle btn-primary"
+            :title="$t('search_by_photo')"
+            :aria-label="$t('search_by_photo')"
+            @click="fileInput?.click()"
+        >
+            <Icon name="material-symbols:photo-camera-outline" size="1.25rem" />
+        </button>
+        <input ref="fileInput" type="file" accept="image/*" class="hidden" @change="handleImage" />
     </div>
 </template>

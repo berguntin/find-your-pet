@@ -22,10 +22,7 @@ interface CloudinaryResource {
  * through our serverless functions (Vercel caps request bodies at 4.5 MB).
  */
 export class CloudinaryImageStorage implements ImageStorage {
-    constructor(
-        private readonly options: CloudinaryOptions,
-        private readonly clock: Clock
-    ) {}
+    constructor(private readonly options: CloudinaryOptions, private readonly clock: Clock) {}
 
     private get deliveryPrefix(): string {
         return `https://res.cloudinary.com/${this.options.cloudName}/image/upload/`
@@ -50,7 +47,10 @@ export class CloudinaryImageStorage implements ImageStorage {
         const folderIndex = segments.indexOf(this.options.folder)
         if (folderIndex === -1 || folderIndex === segments.length - 1) return null
 
-        return segments.slice(folderIndex).join('/').replace(/\.[a-z0-9]+$/i, '')
+        return segments
+            .slice(folderIndex)
+            .join('/')
+            .replace(/\.[a-z0-9]+$/i, '')
     }
 
     previewUrl(url: string, maxSize: number): string {

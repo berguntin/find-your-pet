@@ -18,6 +18,32 @@ describe('parseServerConfig', () => {
         expect(config.internalToken).toBeUndefined()
         expect(config.openai.apiKey).toBeUndefined()
         expect(config.upstash).toEqual({ url: undefined, token: undefined })
+        expect(config.gemini).toEqual({ apiKey: undefined, embeddingModel: 'gemini-embedding-2-preview' })
+        expect(config.imageSearch).toEqual({ matchFloor: 0.6, matchCeiling: 0.95 })
+        expect(config.semanticSearch).toEqual({
+            textFloor: 0.55,
+            textCeiling: 0.85,
+            imageFloor: 0.25,
+            imageCeiling: 0.45
+        })
+    })
+
+    it('rejects a semantic calibration whose ceilings are not above their floors', () => {
+        expect(() =>
+            parseServerConfig(runtimeConfig({ semanticSearch: { imageFloor: 0.5, imageCeiling: 0.4 } }))
+        ).toThrow(/semantic search/)
+    })
+
+    it('reads the match calibration from strings, as environment variables are', () => {
+        const config = parseServerConfig(runtimeConfig({ imageSearch: { matchFloor: '0.7', matchCeiling: '0.9' } }))
+
+        expect(config.imageSearch).toEqual({ matchFloor: 0.7, matchCeiling: 0.9 })
+    })
+
+    it('rejects a calibration whose ceiling is not above its floor', () => {
+        expect(() => parseServerConfig(runtimeConfig({ imageSearch: { matchFloor: 0.9, matchCeiling: 0.8 } }))).toThrow(
+            /matchCeiling/
+        )
     })
 
     it('keeps optional values when set', () => {

@@ -1,11 +1,7 @@
 export type DomainErrorCode = 'validation' | 'content_rejected' | 'not_found' | 'forbidden' | 'conflict'
 
 export class DomainError extends Error {
-    constructor(
-        readonly code: DomainErrorCode,
-        message: string,
-        readonly details?: Record<string, unknown>
-    ) {
+    constructor(readonly code: DomainErrorCode, message: string, readonly details?: Record<string, unknown>) {
         super(message)
         this.name = new.target.name
     }

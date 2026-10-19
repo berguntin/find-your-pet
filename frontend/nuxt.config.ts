@@ -41,6 +41,20 @@ export default defineNuxtConfig({
             describerModel: 'gpt-4o-mini',
             moderationModel: 'gpt-6-luna'
         },
+        gemini: {
+            apiKey: '',
+            embeddingModel: 'gemini-embedding-2-preview'
+        },
+        imageSearch: {
+            matchFloor: 0.6,
+            matchCeiling: 0.95
+        },
+        semanticSearch: {
+            textFloor: 0.55,
+            textCeiling: 0.85,
+            imageFloor: 0.25,
+            imageCeiling: 0.45
+        },
         upstash: {
             url: '',
             token: ''

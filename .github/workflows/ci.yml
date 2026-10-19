@@ -13,7 +13,7 @@ jobs:
         working-directory: frontend
     services:
       postgres:
-        image: postgres:17
+        image: pgvector/pgvector:pg17
         env:
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: pets_test

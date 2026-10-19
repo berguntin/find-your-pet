@@ -101,6 +101,12 @@ export class PostgresPetRepository implements PetRepository {
         return row ? toDomain(row) : null
     }
 
+    async findByIds(ids: string[]): Promise<Pet[]> {
+        if (ids.length === 0) return []
+        const rows = await this.sql<PetRow[]>`select ${this.sql(COLUMNS)} from pets where id = any(${ids}::uuid[])`
+        return rows.map(toDomain)
+    }
+
     async delete(id: string): Promise<void> {
         await this.sql`delete from pets where id = ${id}`
     }

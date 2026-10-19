@@ -20,9 +20,12 @@
         "test:coverage": "vitest run --coverage",
         "db:migrate": "dbmate --env NUXT_DATABASE_URL --migrations-dir server/db/migrations --no-dump-schema --wait up",
         "db:rollback": "dbmate --env NUXT_DATABASE_URL --migrations-dir server/db/migrations --no-dump-schema rollback",
-        "db:new": "dbmate --migrations-dir server/db/migrations new"
+        "db:new": "dbmate --migrations-dir server/db/migrations new",
+        "eval:embeddings": "tsx scripts/eval-embeddings.ts",
+        "reindex:search": "tsx scripts/reindex-search.ts"
     },
     "dependencies": {
+        "@google/genai": "^2.30.0",
         "@nuxt/content": "^2.13.4",
         "@nuxt/icon": "1.7.0",
         "@nuxtjs/i18n": "^9.0.0-rc.2",
@@ -54,6 +57,7 @@
         "dbmate": "^2.37.0",
         "eslint": "^9.39.5",
         "prettier": "^2.0.0",
+        "tsx": "^4.23.15",
         "typescript": "~5.7.3",
         "vitest": "^2.1.9",
         "vue-tsc": "^2.2.12"

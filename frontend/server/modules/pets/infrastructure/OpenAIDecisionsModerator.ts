@@ -30,10 +30,7 @@ const SPECIES_LABEL = { dog: 'dog', cat: 'cat', other: 'other animal' } as const
 
 /** Asks the OpenAI Decisions API how likely a report is to be a genuine, acceptable lost/found pet notice. */
 export class OpenAIDecisionsModerator implements ContentModerator {
-    constructor(
-        private readonly client: DecisionsClient,
-        private readonly model: string
-    ) {}
+    constructor(private readonly client: DecisionsClient, private readonly model: string) {}
 
     async review(submission: ModerationSubmission): Promise<ModerationScores> {
         const decision = await this.client.decisions.create(

@@ -12,8 +12,10 @@ import { runInBackground } from './shared/infrastructure/background'
 import { createDatabase } from './shared/infrastructure/database'
 import { PostgresOutboxStore } from './shared/infrastructure/PostgresOutboxStore'
 import { NoopRateLimiter, UpstashRateLimiter } from './shared/infrastructure/rateLimiters'
-import { createPetsModule, type PetsModule } from './modules/pets'
+import { GoogleGenAI } from '@google/genai'
+import { createPetsModule, petsEventHandlers, type PetsModule } from './modules/pets'
 import { CloudinaryImageStorage } from './modules/pets/infrastructure/CloudinaryImageStorage'
+import { GeminiEmbedder, UnavailableEmbedder } from './modules/pets/infrastructure/GeminiEmbedder'
 import {
     DisabledContentModerator,
     OpenAIDecisionsModerator
@@ -23,6 +25,7 @@ import {
     DisabledPetDescriber,
     OpenAIPetDescriber
 } from './modules/pets/infrastructure/OpenAIPetDescriber'
+import { PostgresPetEmbeddingIndex } from './modules/pets/infrastructure/PostgresPetEmbeddingIndex'
 import { PostgresPetRepository } from './modules/pets/infrastructure/PostgresPetRepository'
 
 export interface Container {
@@ -58,9 +61,35 @@ function buildContainer(): Container {
         )
     }
     if (!config.upstash.url || !config.upstash.token) consola.warn('Upstash is not configured: rate limiting is off')
+    if (!config.gemini.apiKey)
+        consola.warn('NUXT_GEMINI_API_KEY is not set: image search is off and text search uses keywords only')
 
-    // Modules subscribe their handlers here (image indexing, notifications...).
+    const pets = createPetsModule({
+        pets: new PostgresPetRepository(sql),
+        images: new CloudinaryImageStorage(config.cloudinary, clock),
+        describer: openai ? new OpenAIPetDescriber(openai, config.openai.describerModel) : new DisabledPetDescriber(),
+        moderator: openai
+            ? new OpenAIDecisionsModerator(openai, config.openai.moderationModel)
+            : new DisabledContentModerator(isDevelopment),
+        embedder: config.gemini.apiKey
+            ? new GeminiEmbedder(new GoogleGenAI({ apiKey: config.gemini.apiKey }), config.gemini.embeddingModel)
+            : new UnavailableEmbedder(),
+        embeddingIndex: new PostgresPetEmbeddingIndex(sql),
+        matchCalibration: { floor: config.imageSearch.matchFloor, ceiling: config.imageSearch.matchCeiling },
+        semanticCalibration: {
+            text: { floor: config.semanticSearch.textFloor, ceiling: config.semanticSearch.textCeiling },
+            image: { floor: config.semanticSearch.imageFloor, ceiling: config.semanticSearch.imageCeiling }
+        },
+        clock,
+        ids: { next: () => randomUUID() },
+        reportError
+    })
+
+    // Modules subscribe their handlers here (image indexing now; notifications later).
     const eventHandlers = new EventHandlerRegistry()
+    if (config.gemini.apiKey) {
+        for (const [type, handler] of Object.entries(petsEventHandlers(pets))) eventHandlers.on(type, handler)
+    }
 
     return {
         config,
@@ -69,19 +98,7 @@ function buildContainer(): Container {
                 ? new UpstashRateLimiter({ url: config.upstash.url, token: config.upstash.token })
                 : new NoopRateLimiter(),
         processOutbox: new ProcessOutbox(new PostgresOutboxStore(sql), eventHandlers, clock),
-        pets: createPetsModule({
-            pets: new PostgresPetRepository(sql),
-            images: new CloudinaryImageStorage(config.cloudinary, clock),
-            describer: openai
-                ? new OpenAIPetDescriber(openai, config.openai.describerModel)
-                : new DisabledPetDescriber(),
-            moderator: openai
-                ? new OpenAIDecisionsModerator(openai, config.openai.moderationModel)
-                : new DisabledContentModerator(isDevelopment),
-            clock,
-            ids: { next: () => randomUUID() },
-            reportError
-        })
+        pets
     }
 }
 

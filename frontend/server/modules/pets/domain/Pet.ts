@@ -82,7 +82,7 @@ export class Pet {
             location: requiredText(data.location, 'location', PET_LIMITS.locationMaxLength),
             contact: requiredText(data.contact, 'contact', PET_LIMITS.contactMaxLength),
             images,
-            alive: data.reportType === 'lost' ? true : (data.alive ?? true),
+            alive: data.reportType === 'lost' ? true : data.alive ?? true,
             eventDate: validEventDate(data.eventDate, context.now),
             resolution: 'open',
             resolvedBy: null,
