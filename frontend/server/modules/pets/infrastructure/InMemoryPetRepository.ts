@@ -23,6 +23,13 @@ export class InMemoryPetRepository implements PetRepository {
         return pet ? Pet.restore(pet.toSnapshot()) : null
     }
 
+    async findByIds(ids: string[]): Promise<Pet[]> {
+        return ids.flatMap(id => {
+            const pet = this.pets.get(id)
+            return pet ? [Pet.restore(pet.toSnapshot())] : []
+        })
+    }
+
     async delete(id: string): Promise<void> {
         this.pets.delete(id)
     }

@@ -65,6 +65,10 @@ export const describePetSchema = z.object({
 })
 export type DescribePetRequest = z.input<typeof describePetSchema>
 
+/** Same constraints as describe: a resized photo as a data URL. The photo is never stored. */
+export const searchByImageSchema = describePetSchema
+export type SearchByImageRequest = z.input<typeof searchByImageSchema>
+
 export const petIdSchema = z.string().uuid()
 
 export interface PetDto {
@@ -89,6 +93,16 @@ export interface PetDto {
 export interface PetPageDto {
     items: PetDto[]
     nextCursor: string | null
+}
+
+export interface PetMatchDto {
+    pet: PetDto
+    /** Calibrated similarity, 0–100. */
+    match: number
+}
+
+export interface PetMatchListDto {
+    items: PetMatchDto[]
 }
 
 export interface PetDescriptionDto {
@@ -116,6 +130,7 @@ export interface ApiErrorDto {
             | 'conflict'
             | 'unauthorized'
             | 'rate_limited'
+            | 'unavailable'
             | 'internal'
         message: string
         details?: Record<string, unknown>

@@ -6,7 +6,9 @@
 > - La base de datos empieza vacía, así que la evaluación de embeddings no puede usar datos propios (ver 3.2).
 > - La indexación de embeddings va en segundo plano, a través de un outbox.
 
-> **Estado (19/10/2026):** los requisitos previos (sección 1) y la moderación (sección 2) están implementados en la rama `feat/moderation`. La búsqueda por imagen (sección 3) está pendiente.
+> **Estado (19/10/2026):** los requisitos previos (sección 1) y la moderación (sección 2) están en `main`. La búsqueda por imagen (sección 3) está implementada en `feat/image-search`, salvo dos puntos que dependen de datos y claves reales: la evaluación del modelo y la calibración del porcentaje (3.2, ver `npm run eval:embeddings`) y el recorte del animal (3.1), que se decidirá con esa evaluación. Hasta entonces la calibración usa valores provisionales (0,6 y 0,95).
+
+> **Añadido el 19/10/2026: búsqueda semántica por texto.** Buscar "perro negro" debe devolver los perros negros aunque el aviso no use esas palabras. Se aprovecha que Gemini Embedding 2 es multimodal: al publicar, se indexan también el texto del aviso (`pet_text_embeddings`). La consulta se compara con los textos y con las fotos, cada comparación con su propia calibración, y la mejor ordena la mascota. Los aciertos por palabra (nombres, teléfonos, pueblos) siguen apareciendo primero. Sin Gemini, o por encima de su rate limit, la búsqueda es por palabras como antes. **Limitación:** es una búsqueda por similitud con un umbral, no un filtro exacto: puede colarse algún perro gris oscuro o faltar alguno con fotos poco claras. Si se necesita un filtro exacto por color, habría que extraer atributos estructurados (especie, colores, tamaño) con un modelo de visión al publicar y filtrar por ellos.
 
 Dos funcionalidades:
 

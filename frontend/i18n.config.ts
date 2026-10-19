@@ -60,7 +60,14 @@ export default defineI18nConfig(() => ({
             contact_examples: '(teléfono, email, instagram, etc..)',
             register_pet: 'Registrar mascota',
             registering: 'Registrando...',
-            load_more: 'Cargar más'
+            load_more: 'Cargar más',
+            search_by_photo: 'Buscar por foto',
+            searching_by_photo: 'Buscando mascotas parecidas...',
+            photo_search_results: 'Mascotas que se parecen a tu foto, de más a menos parecidas',
+            no_photo_matches: 'No hemos encontrado mascotas parecidas a tu foto',
+            match_percentage: '{match}% de coincidencia',
+            image_search_unavailable: 'La búsqueda por foto no está disponible ahora mismo',
+            too_many_searches: 'Has hecho muchas búsquedas seguidas. Inténtalo de nuevo en unos minutos'
         },
         en: {
             welcome: 'Welcome',
@@ -117,7 +124,14 @@ export default defineI18nConfig(() => ({
             contact_examples: '(phone, email, instagram, etc..)',
             register_pet: 'Register pet',
             registering: 'Registering...',
-            load_more: 'Load more'
+            load_more: 'Load more',
+            search_by_photo: 'Search by photo',
+            searching_by_photo: 'Looking for similar pets...',
+            photo_search_results: 'Pets that look like your photo, most similar first',
+            no_photo_matches: 'We could not find pets that look like your photo',
+            match_percentage: '{match}% match',
+            image_search_unavailable: 'Search by photo is not available right now',
+            too_many_searches: 'Too many searches in a row. Please try again in a few minutes'
         }
     }
 }))

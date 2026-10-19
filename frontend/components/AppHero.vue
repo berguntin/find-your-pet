@@ -1,6 +1,7 @@
 <script setup lang="ts">
     const emit = defineEmits<{
         (e: 'search', data: string): void
+        (e: 'searchByImage', file: File): void
     }>()
 
     const emitSearch = (search: string) => {
@@ -18,6 +19,6 @@
             {{ $t('mainpage_subtitle_2') }}
         </p>
 
-        <AppSearch @update-query="emitSearch" />
+        <AppSearch @update-query="emitSearch" @search-by-image="file => emit('searchByImage', file)" />
     </div>
 </template>

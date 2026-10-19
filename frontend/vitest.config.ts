@@ -3,10 +3,12 @@ import { defineConfig } from 'vitest/config'
 export default defineConfig({
     test: {
         environment: 'node',
-        include: ['{server,contracts,composables,utils}/**/*.test.ts'],
+        // Integration test files share one database and empty its tables: run them one at a time.
+        fileParallelism: !process.env.TEST_DATABASE_URL,
+        include: ['{server,contracts,composables,utils,scripts}/**/*.test.ts'],
         coverage: {
             provider: 'v8',
-            include: ['server/**/*.ts', 'contracts/**/*.ts', 'composables/**/*.ts', 'utils/**/*.ts'],
+            include: ['server/**/*.ts', 'contracts/**/*.ts', 'composables/**/*.ts', 'utils/**/*.ts', 'scripts/lib/**/*.ts'],
             // Wiring, Nuxt-only code and browser canvas helpers are covered by the build and manual checks.
             exclude: ['**/*.test.ts', 'server/container.ts', 'server/test/**', 'utils/images.ts'],
             reporter: ['text-summary', 'text'],

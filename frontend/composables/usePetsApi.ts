@@ -3,6 +3,7 @@ import type {
     ListPetsQuery,
     PetDescriptionDto,
     PetDto,
+    PetMatchListDto,
     PetPageDto,
     ReportPetRequest,
     UploadAuthorizationDto
@@ -13,6 +14,9 @@ export const usePetsApi = () => ({
     list: (query: ListPetsQuery = {}) => $fetch<PetPageDto>('/api/v1/pets', { query }),
 
     report: (body: ReportPetRequest) => $fetch<PetDto>('/api/v1/pets', { method: 'POST', body }),
+
+    searchByImage: (image: DescribePetRequest['image']) =>
+        $fetch<PetMatchListDto>('/api/v1/pets/search-by-image', { method: 'POST', body: { image } }),
 
     describe: (image: DescribePetRequest['image']) =>
         $fetch<PetDescriptionDto>('/api/v1/pets/describe', { method: 'POST', body: { image } }),

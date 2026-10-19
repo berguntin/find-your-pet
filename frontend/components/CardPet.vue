@@ -1,9 +1,18 @@
 <script setup lang="ts">
     import ButtonShare from '@/components/social/ButtonShare.vue'
 
-    defineProps<{
+    const props = defineProps<{
         pet: Pet
+        /** Image search similarity, 0–100. */
+        match?: number
     }>()
+
+    const matchClass = computed(() => {
+        if (props.match === undefined) return ''
+        if (props.match >= 80) return 'badge-success'
+        if (props.match >= 50) return 'badge-warning'
+        return 'badge-neutral'
+    })
 </script>
 
 <template>
@@ -24,7 +33,16 @@
                 <Icon name="el:eye-close" />
                 <span>{{ $t('sensible_content') }}</span>
             </div>
-            <div v-if="pet.resolution === 'reunited'" class="absolute top-2 left-2 badge badge-primary badge-lg gap-2 p-4 z-10">
+            <!-- Reunited pets never appear in image search, so both badges can share the corner. -->
+            <div
+                v-if="match !== undefined"
+                class="absolute top-2 left-2 badge badge-lg gap-1 p-4 z-10 font-semibold"
+                :class="matchClass"
+            >
+                <Icon name="material-symbols:image-search" />
+                {{ $t('match_percentage', { match }) }}
+            </div>
+            <div v-else-if="pet.resolution === 'reunited'" class="absolute top-2 left-2 badge badge-primary badge-lg gap-2 p-4 z-10">
                 <Icon name="material-symbols:home-outline" />
                 {{ $t('reunited_with_his_family') }}
             </div>

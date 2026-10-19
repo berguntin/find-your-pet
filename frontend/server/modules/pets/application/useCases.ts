@@ -74,15 +74,6 @@ export class ReportPet {
     }
 }
 
-/** Public listing: only approved pets. */
-export class ListPets {
-    constructor(private readonly pets: PetRepository) {}
-
-    execute(criteria: Omit<PetSearchCriteria, 'moderationStatus'>): Promise<Page<Pet>> {
-        return this.pets.search({ ...criteria, moderationStatus: 'approved' })
-    }
-}
-
 /** Admin listing by moderation status, pending review by default. */
 export class ListPetsForModeration {
     constructor(private readonly pets: PetRepository) {}
@@ -105,10 +96,7 @@ export class GetPet {
 }
 
 export class MarkPetAsReunited {
-    constructor(
-        private readonly pets: PetRepository,
-        private readonly clock: Clock
-    ) {}
+    constructor(private readonly pets: PetRepository, private readonly clock: Clock) {}
 
     async execute(id: string, actor: Actor): Promise<Pet> {
         const pet = await findPet(this.pets, id)

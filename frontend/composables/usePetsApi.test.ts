@@ -28,6 +28,15 @@ describe('usePetsApi', () => {
         expect($fetch).toHaveBeenCalledWith('/api/v1/pets', { method: 'POST', body })
     })
 
+    it('searches by image', async () => {
+        await usePetsApi().searchByImage('data:image/jpeg;base64,AAAA')
+
+        expect($fetch).toHaveBeenCalledWith('/api/v1/pets/search-by-image', {
+            method: 'POST',
+            body: { image: 'data:image/jpeg;base64,AAAA' }
+        })
+    })
+
     it('sends the image to describe', async () => {
         await usePetsApi().describe('data:image/jpeg;base64,AAAA')
 

@@ -19,6 +19,7 @@ export interface PetSearchCriteria {
 export interface PetRepository {
     save(pet: Pet): Promise<void>
     findById(id: string): Promise<Pet | null>
+    findByIds(ids: string[]): Promise<Pet[]>
     delete(id: string): Promise<void>
     search(criteria: PetSearchCriteria): Promise<Page<Pet>>
     /** Every image URL used by any pet, to find orphan uploads. */
@@ -73,4 +74,46 @@ export interface ModerationSubmission {
 export interface ContentModerator {
     /** Throws when the moderator cannot be reached; the caller then sends the report to manual review. */
     review(submission: ModerationSubmission): Promise<ModerationScores>
+}
+
+export type EmbeddingInput =
+    | { kind: 'url'; url: string }
+    | { kind: 'bytes'; mimeType: string; data: Uint8Array }
+    | { kind: 'text'; text: string }
+
+/** Multimodal embeddings: text and images share one vector space, so text can find photos. */
+export interface Embedder {
+    /** Identifies the vectors' space: vectors from different models are never compared. */
+    readonly model: string
+    /** False when the provider is not configured; callers skip semantic features instead of failing. */
+    readonly available: boolean
+    /** One vector per input, in the same order. */
+    embed(inputs: EmbeddingInput[]): Promise<number[][]>
+}
+
+export interface IndexedImage {
+    imageUrl: string
+    vector: number[]
+}
+
+export interface PetEmbeddings {
+    images: IndexedImage[]
+    /** Embedding of the report text (species, description, name, location). */
+    text: number[]
+}
+
+export type EmbeddingSource = 'image' | 'text'
+
+export interface SimilarPet {
+    petId: string
+    /** Cosine similarity of the pet's closest vector of the requested source. */
+    similarity: number
+}
+
+export interface PetEmbeddingIndex {
+    /** Replaces every vector of the pet for the model. */
+    replace(petId: string, model: string, embeddings: PetEmbeddings): Promise<void>
+    remove(petId: string): Promise<void>
+    /** Pets whose vectors of `source` are closest, best vector per pet, most similar first. */
+    findSimilar(vector: number[], model: string, limit: number, source: EmbeddingSource): Promise<SimilarPet[]>
 }

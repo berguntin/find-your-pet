@@ -33,9 +33,7 @@ export class InMemoryOutboxStore implements OutboxStore {
     }
 
     async claim(limit: number, now: Date): Promise<OutboxEntry[]> {
-        const claimed = this.events
-            .filter(e => !e.processedAt && !e.deadAt && e.availableAt <= now)
-            .slice(0, limit)
+        const claimed = this.events.filter(e => !e.processedAt && !e.deadAt && e.availableAt <= now).slice(0, limit)
         claimed.forEach(e => (e.availableAt = new Date(now.getTime() + 2 * 60 * 1000)))
         return claimed.map(({ event, attempts }) => ({ event, attempts }))
     }
