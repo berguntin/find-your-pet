@@ -16,7 +16,12 @@ const optional = () =>
  * Values not set in the environment keep the runtime config ones.
  */
 type Section = Record<string, unknown>
-type RuntimeConfigInput = Record<string, unknown> & { cloudinary?: Section; openai?: Section; upstash?: Section }
+type RuntimeConfigInput = Record<string, unknown> & {
+    cloudinary?: Section
+    openai?: Section
+    gemini?: Section
+    upstash?: Section
+}
 
 export function withRawSecrets(
     runtimeConfig: RuntimeConfigInput,
@@ -38,6 +43,10 @@ export function withRawSecrets(
         openai: {
             ...runtimeConfig.openai,
             apiKey: raw('NUXT_OPENAI_API_KEY', runtimeConfig.openai?.apiKey)
+        },
+        gemini: {
+            ...runtimeConfig.gemini,
+            apiKey: raw('NUXT_GEMINI_API_KEY', runtimeConfig.gemini?.apiKey)
         },
         // Also accept the variable names the Upstash integration for Vercel creates.
         upstash: {
