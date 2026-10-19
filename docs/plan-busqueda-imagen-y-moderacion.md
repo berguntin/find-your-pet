@@ -1,145 +1,174 @@
-# Plan: búsqueda por imagen y moderación automática
+# Plan: moderación automática y búsqueda por imagen
 
-Dos funcionalidades nuevas para Find Your Pet:
+> **Revisión 19/10/2026.** Plan actualizado para la arquitectura hexagonal en Nuxt ([plan de refactorización](./plan-refactorizacion-hexagonal.md)). Cambios respecto a la versión anterior:
+> - Los arreglos del antiguo `createPet` ya no aplican: el backend Express ya no existe.
+> - La Decisions API está verificada en los tipos del SDK oficial de Node (`openai@7.39.0`). Acepta URLs públicas de imagen, así que no hace falta base64 ni `sharp`.
+> - La base de datos empieza vacía, así que la evaluación de embeddings no puede usar datos propios (ver 3.2).
+> - La indexación de embeddings va en segundo plano, a través de un outbox.
 
-1. **Búsqueda de mascotas por imagen**: el usuario sube una foto y se muestran las mascotas más parecidas, con un porcentaje de coincidencia en cada card.
-2. **Moderación automática de contenido** con la OpenAI Decisions API: se comprueba que el texto y las imágenes de cada aviso corresponden a una mascota perdida o encontrada.
+Dos funcionalidades:
 
-Ambas dependen del flujo de alta (`createPet`), que tiene bugs que conviene arreglar primero.
-
-> **Nota:** este plan se implementa en la fase 5 del [plan de refactorización](./plan-refactorizacion-hexagonal.md). Las rutas `backend/src/...` pasan a `server/modules/pets/...` (por ejemplo, `services/embeddings.js` será el adaptador del puerto `ImageEmbedder`), multer se sustituye por la subida directa a Cloudinary y los cambios de esquema van como migraciones en `server/db/migrations/`.
-
----
-
-## 0. Arreglos previos
-
-Archivo: [`backend/src/controllers/pets.js`](../backend/src/controllers/pets.js)
-
-- `createPet` tiene `to_jsonb(images)` dentro de la lista de columnas del `INSERT`. Eso es SQL inválido.
-- `createPet` devuelve `id` sin haberlo definido. Hay que añadir `RETURNING id` al `INSERT`.
-- Las imágenes se guardan como un string JSON dentro de una columna JSONB, codificadas dos veces (se ve en `backend/db/init.d/pets.csv`). `getAllPets` lo compensa con `JSON.parse` y `getPetById` no. Hay que normalizarlo con una migración que convierta los valores a un array JSONB real y quitar el `JSON.parse`.
-- `GET /pets` usa `SELECT *`. Cuando existan las columnas de moderación habrá que listar las columnas a mano (los embeddings irán en otra tabla).
+1. **Moderación automática** con la OpenAI Decisions API: comprueba que el texto y las imágenes de cada aviso corresponden a una mascota perdida o encontrada.
+2. **Búsqueda por imagen**: el usuario sube una foto y ve las mascotas más parecidas, con un porcentaje de coincidencia en cada card.
 
 ---
 
-## 1. Búsqueda por imagen
+## 1. Requisitos previos
 
-### 1.1 Elección del modelo
+| Requisito | Por qué | Detalle |
+|---|---|---|
+| **Actualizar `openai` de 4.72 a 7.x** | `client.decisions` solo existe en versiones recientes (verificado en 7.39.0) | Requiere Node ≥ 22 (ya usamos 24) y acepta `zod ^3.25 \|\| ^4`. Es un salto de versión mayor: hay que revisar `OpenAIPetDescriber` (usa `chat.completions`) con sus tests. |
+| **Rate limiting** | `describe`, la búsqueda por imagen y la moderación tienen coste por llamada | Puerto `RateLimiter` con adaptador de Upstash Redis (`@upstash/ratelimit`), aplicado en los handlers con coste. En serverless, la memoria de cada instancia no sirve como contador. |
+| **Outbox mínimo** (fase 4 del plan de refactorización) | La indexación de embeddings no debe bloquear ni romper el alta | Tabla `outbox`, `EventBus`, proceso inmediato con `event.waitUntil` y reintentos desde un workflow programado de GitHub Actions (ver 5: Vercel Hobby solo permite un cron diario). |
 
-Un embedding genérico de imagen (CLIP o similar) parecido a otro indica "misma raza y color", no "mismo animal". Para reconocer al individuo:
+---
 
-1. **Recortar el animal** antes de calcular el embedding. Si no, el fondo, que en estas fotos cambia mucho, pesa demasiado en el resultado. Se puede hacer con un detector ligero o pidiendo la caja delimitadora al modelo de visión que ya se usa en `frontend/server/api/chat-gpt.ts`.
-2. **Calcular el embedding del recorte.** Candidatos:
+## 2. Moderación automática
+
+### 2.1 Dominio (`server/modules/pets/domain/`)
+
+- Nuevo value object `Moderation`: `status: 'approved' | 'pending_review' | 'rejected'`, `scores` y `reviewedAt`.
+- **`ModerationPolicy`** (función pura y testeable): convierte las probabilidades en un estado.
+  - `is_pet_report ≥ 0.8` y `inappropriate < 0.2` → `approved`.
+  - `is_pet_report < 0.3` o `inappropriate ≥ 0.7` → `rejected`.
+  - El resto, cualquier `refusal` y cualquier fallo → `pending_review`.
+  - Los umbrales son configurables y se ajustarán con datos reales.
+- `Pet.report()` recibe el resultado de la moderación. `Pet` expone `isPublic` (aprobada).
+
+### 2.2 Aplicación
+
+- Puerto nuevo **`ContentModerator`**: `review(submission) → ModerationScores | null`, donde `null` significa que no se pudo evaluar.
+- **`ReportPet`**:
+  1. Valida el dominio.
+  2. Modera.
+  3. Aplica `ModerationPolicy`.
+  4. Si el resultado es `rejected`, lanza un `ValidationError` con `code: 'content_rejected'` y **no guarda nada**.
+  5. En otro caso, guarda.
+- **Imágenes huérfanas**: con la subida directa, las imágenes ya están en Cloudinary antes del alta. Si se rechaza, hay que borrarlas con un método nuevo `ImageStorage.delete(urls)`. Además, una tarea periódica limpia las imágenes de la carpeta que no estén referenciadas pasadas 24 h (cubre formularios abandonados).
+- `ListPets`, `GetPet` y la búsqueda por imagen solo devuelven mascotas `approved`. Al resto solo accede el admin.
+
+### 2.3 Infraestructura
+
+- **`OpenAIDecisionsModerator`** (`infrastructure/`). Una sola llamada a `client.decisions.create` con:
+  - `model`: configurable, `gpt-6-luna` por defecto (hoy es el único modelo soportado).
+  - `input`: un mensaje con los campos de texto y las imágenes como **URLs de Cloudinary con una transformación reducida** (por ejemplo, insertando `c_limit,w_768`) para gastar menos tokens. Cloudinary sirve las imágenes públicamente, así que no hace falta descargarlas ni codificarlas.
+  - `questions` (las respuestas llegan en el mismo orden):
+    - `predicate is_pet_report`: ¿es un aviso de una mascota perdida o encontrada?
+    - `predicate images_show_animal`: ¿las imágenes muestran un animal o un cartel de mascota?
+    - `predicate inappropriate`: ¿contiene spam, contenido ofensivo, contenido sexual o violencia gratuita?
+  - `safety_identifier`: un hash anónimo de la IP o, cuando exista el login, del usuario.
+  - Hay que tratar las respuestas `type: 'refusal'`: cuentan como `pending_review`.
+  - Un timeout corto (≈10 s) y un reintento.
+- Migración: columnas `moderation_status`, `moderation_scores jsonb` y `moderated_at` en `pets`, con un índice parcial sobre `moderation_status = 'approved'`. Hay que actualizar el índice del listado.
+- Configuración: `NUXT_OPENAI_MODERATION_MODEL` y los umbrales. Sin clave de OpenAI se usa `DisabledContentModerator`, que aprueba todo y deja aviso en el log, para que el desarrollo local funcione.
+
+### 2.4 Revisión manual (admin)
+
+Hasta que haya panel, endpoints protegidos con el token de admin:
+
+- `GET /api/v1/admin/pets?moderation=pending_review`
+- `PATCH /api/v1/admin/pets/:id/moderation` con `{ "status": "approved" | "rejected" }`
+
+### 2.5 Frontend
+
+- [`pages/registrar/index.vue`](../frontend/pages/registrar/index.vue): mensajes distintos para `content_rejected` ("no parece un aviso de mascota") y para un aviso pendiente de revisión ("lo revisaremos antes de publicarlo").
+- `contracts/pets.ts`: añadir `moderation` a la respuesta del alta (solo `status`, no las puntuaciones) y el nuevo código de error.
+
+### 2.6 Tests
+
+- `ModerationPolicy`: tabla de casos con umbrales, refusals y fallos.
+- `ReportPet`: rechazado (no guarda y borra imágenes), pendiente (guarda y queda oculto), fallo del moderador (queda pendiente).
+- `OpenAIDecisionsModerator` con un cliente falso, como `OpenAIPetDescriber`: forma de la petición, mapeo de respuestas y refusals.
+- HTTP: 422 `content_rejected`, ocultación de pendientes y endpoints de admin.
+
+---
+
+## 3. Búsqueda por imagen
+
+### 3.1 Modelo de embeddings
+
+Un embedding genérico de imagen parecido a otro indica "misma raza y color", no "mismo animal". Dos medidas:
+
+1. **Recortar el animal** antes de calcular el embedding. El fondo varía mucho entre fotos.
+   - Opción sin código propio: un recorte inteligente de Cloudinary en la URL (gravity por objeto, por ejemplo `g_auto` o detección de `dog`/`cat`). **Hay que verificar** qué transformaciones incluye nuestro plan de Cloudinary.
+   - Si no, un puerto `AnimalDetector`.
+2. **Proveedor**, detrás del puerto `ImageEmbedder`:
 
    | Opción | Ventajas | Inconvenientes |
    |---|---|---|
-   | **Gemini Embedding 2** (API, multimodal) | Barato (~0,25 $/1M tokens según una fuente no confirmada), funciona en Vercel sin GPU, sin mantenimiento | Modelo genérico; confirmar el precio por imagen |
-   | **DINOv2** (autoalojado o Replicate / Hugging Face) | Suele ser mejor que CLIP para comparar ejemplares concretos | El backend está en Vercel (`vercel.json`) y ahí no puede ejecutar el modelo. Necesita un servicio aparte |
+   | **Gemini Embedding 2** (`gemini-embedding-2-preview`, API) | Multimodal, dimensión configurable (128–3072), funciona en Vercel sin GPU | En preview. Precio sin confirmar en fuente oficial: las fuentes de terceros dan 0,20–0,25 $/1M tokens y ≈0,225 $/1M para imágenes en batch |
+   | **DINOv2** (Replicate / Hugging Face Inference) | Suele ser mejor para distinguir ejemplares concretos | Servicio externo aparte, latencia de arranque en frío |
 
-   **Recomendación:** empezar con Gemini Embedding 2 y decidir tras la evaluación (1.2). El proveedor irá detrás de una interfaz `embedImage(buffer) → number[]` para poder cambiarlo sin tocar el resto.
+   **Recomendación:** empezar con Gemini Embedding 2 a 768 dimensiones y decidir tras la evaluación.
 
-### 1.2 Evaluación con datos propios
+### 3.2 Evaluación
 
-Las mascotas que tienen varias fotos en la BD ya forman pares de "mismo animal". Un script (`backend/scripts/eval-embeddings.js`):
+La base de datos empieza vacía, así que no hay pares "misma mascota" propios. Opciones:
 
-- Usa una foto de cada mascota como consulta y el resto como índice.
-- Mide recall@1 y recall@5 de cada modelo candidato.
-- Saca la distribución de similitudes de pares iguales y distintos para calibrar el porcentaje de coincidencia (1.5).
+- **Un dataset público de identificación de animales individuales**, por ejemplo PetFace (ECCV 2024). Hay que **verificar su licencia** antes de usarlo.
+- Fotos propias: varias fotos por animal de mascotas de conocidos (unas 30–50 mascotas bastan para una primera calibración).
 
-### 1.3 Base de datos (pgvector)
+Un script `scripts/eval-embeddings.ts`, que no se despliega, mide recall@1 y recall@5 por proveedor, con y sin recorte, y saca las distribuciones de similitud de pares iguales y distintos para calibrar el porcentaje (3.6).
 
-Supabase admite pgvector. En local, `compose.yaml` debe usar la imagen `pgvector/pgvector` en lugar de `postgres`. La migración se aplica en `backend/db/init.d/init.sql` y en `backend/src/database/schema.sql`.
+### 3.3 Dominio y aplicación
 
-```sql
-create extension if not exists vector;
+- Puertos nuevos:
+  - **`ImageEmbedder`**: `embed(image: ImageSource) → number[]`, donde `ImageSource = { url } | { bytes, mimeType }`.
+  - **`PetImageIndex`**: `upsert(petId, imageUrl, model, vector)`, `remove(petId)` y `findSimilar(vector, { limit, filters }) → { petId, similarity }[]`.
+- **`IndexPetImages`**: un handler del evento `PetReported` (y del aprobado manual) que calcula los embeddings de cada imagen. Es idempotente por `(pet_id, image_url, model)`.
+- **`SearchPetsByImage`**: calcula el embedding de la consulta, busca los vecinos, agrupa por mascota quedándose con la mejor similitud y filtra las aprobadas y abiertas. Devuelve `{ pet, match }`.
+- **`MatchScore`** (dominio, pura): convierte la similitud en porcentaje con la calibración (tramos lineales entre "claramente distinto" y "claramente el mismo"). Por debajo del mínimo, no se devuelve.
+- `DeletePet` también borra los vectores. Con `on delete cascade` basta en Postgres, pero el puerto lo explicita.
 
-create table pet_image_embeddings (
-  id uuid primary key default gen_random_uuid(),
-  pet_id uuid references pets(id) on delete cascade,
-  image_url text not null,
-  model text not null,              -- para poder re-embeber al cambiar de modelo
-  embedding vector(<dim>) not null
-);
+### 3.4 Infraestructura
 
-create index on pet_image_embeddings using hnsw (embedding vector_cosine_ops);
-```
+- Migración: `create extension vector`, tabla `pet_image_embeddings` (`pet_id` con `on delete cascade`, `image_url`, `model`, `embedding vector(768)`, `unique (pet_id, image_url, model)`) e índice HNSW con `vector_cosine_ops`. Hay que comprobar que la extensión está activada en Supabase. En local, `compose.yaml` ya usa `pgvector/pgvector:pg17`; en CI, el servicio `postgres:17` debe cambiarse por esa imagen.
+- `PostgresPetImageIndex` y `GeminiImageEmbedder`. Para URLs, el adaptador descarga la imagen recortada desde Cloudinary.
+- Endpoint **`POST /api/v1/pets/search-by-image`** con `{ image: dataUrl }`, reutilizando la validación de `describePetSchema`. **La foto de búsqueda no se guarda**: solo se calcula su embedding y se descarta. Tiene rate limiting.
+- Reindexado: un script que recalcula los embeddings al cambiar de modelo (por eso se guarda la columna `model`).
 
-### 1.4 Backend
+### 3.5 Frontend
 
-- **`backend/src/services/embeddings.js`**: recorte y embedding a partir del buffer que entrega multer.
-- **`createPet`**: después de subir a Cloudinary, calcula un embedding por imagen y lo inserta en `pet_image_embeddings`. Si el embedding falla, el alta **no** debe fallar. Se registra para reintento.
-- **`POST /api/pets/search-by-image`** (multer, una imagen):
-  1. Calcula el embedding de la consulta.
-  2. Busca los K vecinos más cercanos con el índice HNSW.
-  3. Agrupa por mascota quedándose con su mejor imagen (`max(1 - distancia)`).
-  4. Devuelve `{ ...pet, match }`, ordenado por `match` de mayor a menor, filtrando las mascotas no aprobadas (ver 2).
-- **`backend/scripts/backfill-embeddings.js`**: genera los embeddings de las mascotas existentes a partir de las URLs de Cloudinary.
+- **[`AppSearch.vue`](../frontend/components/AppSearch.vue)**: botón de cámara o subir imagen. Usa `resizeImage` y `blobToDataUrl` de `utils/images.ts`, que ya existen.
+- **[`pages/index.vue`](../frontend/pages/index.vue)**: modo "búsqueda por imagen" que sustituye el listado por los resultados ordenados por coincidencia, con un botón para volver.
+- **[`CardPet.vue`](../frontend/components/CardPet.vue)**: prop opcional `match` con un badge de porcentaje y color por nivel. Hay que cuidar el z-index con los badges actuales.
+- `usePetsApi.searchByImage()`, `PetMatchDto` en `contracts/` y textos nuevos en i18n.
 
-### 1.5 Porcentaje de coincidencia
+### 3.6 Tests
 
-La similitud coseno no es una probabilidad. Se convierte a porcentaje con los umbrales sacados de la evaluación (1.2), por ejemplo una función lineal por tramos entre "claramente distinto" y "claramente el mismo". Los resultados por debajo de un mínimo no se muestran.
-
-### 1.6 Frontend
-
-- **[`AppSearch.vue`](../frontend/components/AppSearch.vue)**: botón de cámara/subir imagen. El redimensionado con canvas de [`chatGptUtils.ts`](../frontend/utils/chatGptUtils.ts) se saca a una función propia y se reutiliza.
-- **[`pages/index.vue`](../frontend/pages/index.vue)**: estado "búsqueda por imagen" que sustituye la lista filtrada por los resultados ordenados por `match`, con un botón para volver a la lista normal.
-- **[`CardPet.vue`](../frontend/components/CardPet.vue)**: prop opcional `match` que muestra un badge con el porcentaje y un color según el nivel (alto, medio, bajo). Hay que cuidar el z-index y la posición respecto a los badges actuales (estado y "reunido con su familia").
-- **Tipos e i18n**: `match?: number` en `types/Pet.ts` y textos nuevos en `i18n.config.ts`.
+- `MatchScore` y la agrupación por mascota (unitarios).
+- `SearchPetsByImage` e `IndexPetImages` con un embedder falso que devuelve vectores fijos.
+- `PostgresPetImageIndex` contra Postgres con pgvector (integración; la CI necesita esa imagen).
+- HTTP: validación, que solo salgan mascotas aprobadas y abiertas, y la respuesta vacía.
 
 ---
 
-## 2. Moderación automática (OpenAI Decisions API)
+## 4. Orden de implementación
 
-> **Comprobar antes de empezar.** Toda la información sobre la Decisions API viene de un tutorial de terceros (DataCamp, 13/10/2026). No he encontrado documentación oficial. Según ese tutorial: está en beta pública, solo admite el modelo `gpt-6-luna`, cobra 0,10 $/1M tokens de entrada y no cobra los de salida, acepta imágenes como `input_image` y los tipos de pregunta son `predicate`, `choice` y `score`. El tutorial solo trae ejemplos en Python. Hay que comprobar que el SDK `openai` de Node incluye `client.decisions` y en qué versión.
+1. Requisitos previos: SDK de OpenAI 7.x, rate limiting y outbox mínimo.
+2. Moderación completa (2.1–2.6). Es independiente y protege la base de datos desde el primer aviso.
+3. Evaluación de embeddings (3.2) con un dataset externo o fotos propias. Elección de proveedor y recorte.
+4. Indexación: pgvector, `ImageEmbedder`, `PetImageIndex` e `IndexPetImages` vía outbox.
+5. Búsqueda: caso de uso, endpoint y UI.
 
-### 2.1 Backend
+## 5. Decisiones
 
-Archivo nuevo: `backend/src/services/moderation.js`. Se ejecuta en `createPet` **antes** de subir a Cloudinary, para que lo rechazado no llegue a guardarse.
+Tomadas el 19/10/2026:
 
-- **Entrada**: los campos de texto (tipo, descripción, nombre, ubicación, contacto) y las imágenes redimensionadas en base64. Para redimensionar se añade la dependencia `sharp`.
-- **Preguntas**:
-  - `predicate is_pet_report`: ¿es un aviso de una mascota perdida o encontrada?
-  - `predicate images_show_animal`: ¿las imágenes muestran un animal? Si hace falta, se pregunta imagen por imagen.
-  - `predicate inappropriate`: spam, contenido ofensivo o datos de terceros. Se puede complementar con `omni-moderation-latest`, el endpoint de moderación específico de OpenAI.
-- **Decisión por umbrales** (ajustables por variable de entorno):
-  - Confianza alta → `approved`.
-  - Zona intermedia → `pending_review`.
-  - Confianza baja → `rejected`, con un 422 y un mensaje para el usuario.
-- **Fallos**: si la API falla o se pasa del timeout, `pending_review` en lugar de rechazar.
-- **Columnas nuevas en `pets`**:
-  ```sql
-  alter table pets
-    add column moderation_status text not null default 'approved'
-      check (moderation_status in ('approved', 'pending_review', 'rejected')),
-    add column moderation_scores jsonb,
-    add column moderated_at timestamp with time zone;
-  ```
-  Las mascotas existentes quedan como `approved` por el valor por defecto. `getAllPets`, `getPetById` y `search-by-image` solo devuelven las `approved`.
-- **Configuración**: nueva variable `OPENAI_API_KEY` en `backend/.env.example`. Hoy la clave solo está en el frontend (`NUXT_OPENAI_KEY`).
+- **Avisos `pending_review`**: quedan **ocultos** hasta que un admin los apruebe (2.4).
+- **Avisos rechazados**: **no se guardan**. Se devuelve el error y se borran sus imágenes de Cloudinary (2.2).
+- **Rate limiting**: **Upstash Redis**. Hace falta crear la base de datos y añadir `UPSTASH_REDIS_REST_URL` y `UPSTASH_REDIS_REST_TOKEN` en Vercel.
+- **Plan de Vercel: Hobby.** El cron de Vercel solo puede ejecutarse a diario, así que:
+  - El outbox se procesa en el momento con `event.waitUntil` después de responder.
+  - Para los reintentos, un **workflow programado de GitHub Actions** (gratis, cada 15 min) llama a un endpoint interno `POST /api/internal/outbox/process` protegido con un secreto. El cron diario de Vercel queda como respaldo.
 
-### 2.2 Frontend
+Pendientes:
 
-- **[`pages/registrar/index.vue`](../frontend/pages/registrar/index.vue)**: mensajes distintos para "rechazado" (con el motivo) y "pendiente de revisión".
-
----
-
-## 3. Orden de implementación
-
-1. Arreglos del punto 0 y migración de imágenes.
-2. Moderación (punto 2). Es independiente y protege la BD antes de rellenarla con embeddings.
-3. pgvector, servicio de embeddings, embeddings en el alta y backfill (1.3, 1.4).
-4. Script de evaluación, elección de modelo y calibración del porcentaje (1.2, 1.5).
-5. Endpoint de búsqueda y UI (1.4, 1.6).
-
-## 4. Decisiones pendientes
-
-- **Proveedor de embeddings**: Gemini Embedding 2 por API o DINOv2 en un servicio aparte. Recomendación: empezar con Gemini y decidir tras la evaluación.
-- **Avisos `pending_review`**: si se publican igualmente o quedan ocultos hasta revisión manual. Hoy no hay panel de administración.
+- **Proveedor de embeddings y dataset de evaluación** (3.1 y 3.2). Se decide en el paso 3, con datos.
 
 ## Fuentes
 
-- [DataCamp – OpenAI Decisions API tutorial](https://www.datacamp.com/tutorial/open-ai-decisions-api-tutorial)
-- [PromptLayer – OpenAI Moderation API](https://www.promptlayer.com/glossary/openai-moderation-api)
-- [Gemini Embedding 2 (NYU Shanghai RITS)](https://rits.shanghai.nyu.edu/ai/google-launches-gemini-embedding-2-its-first-multimodal-embedding-model/)
-- [Roboflow – DINOv2 vs CLIP](https://playground.roboflow.com/models/compare/dinov2-vs-openai-clip)
-- [arXiv 2411.18807](https://arxiv.org/pdf/2411.18807)
+- SDK oficial `openai@7.39.0` (npm), `resources/decisions.d.ts`: forma de la petición y la respuesta, modelos soportados e imágenes por URL.
+- [DataCamp – OpenAI Decisions API tutorial](https://www.datacamp.com/tutorial/open-ai-decisions-api-tutorial) y [Apidog – How to use the OpenAI Decisions API](https://apidog.com/blog/how-to-use-openai-decisions-api/): estado beta y precio (0,10 $/1M tokens de entrada, salida sin coste). No confirmado en fuente oficial.
+- [OpenRouter – Gemini Embedding 2](https://openrouter.ai/google/gemini-embedding-2), [OpenRouter – batch](https://openrouter.ai/google/gemini-embedding-2:batch) y [NYU Shanghai RITS](https://rits.shanghai.nyu.edu/ai/google-launches-gemini-embedding-2-its-first-multimodal-embedding-model/): precios y dimensiones de terceros.
+- [Roboflow – DINOv2 vs CLIP](https://playground.roboflow.com/models/compare/dinov2-vs-openai-clip) y [arXiv 2411.18807](https://arxiv.org/pdf/2411.18807).
