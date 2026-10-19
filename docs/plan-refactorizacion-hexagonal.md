@@ -107,8 +107,10 @@ features/                UI por funcionalidad
   dashboard/
   ads/                   AdSlot, integración con el CMP
 pages/ · layouts/ · components/ (solo componentes genéricos)
-shared/                  tipos y esquemas zod compartidos cliente/servidor (DTOs)
+contracts/               esquemas zod y DTOs de la API compartidos cliente/servidor
 ```
+
+> **Estado (19/10/2026):** fases 1 y 2 implementadas en `frontend/`, con la base de datos desde cero (sin compatibilidad con el contrato antiguo ni migración de datos). Los DTOs compartidos viven en `contracts/` para no confundirlos con `server/shared/`. Pendiente de la fase 3: organización por `features/`. Pendiente de la fase 1: logger estructurado, rate limiting y Sentry.
 
 ### 3.2 Reglas de dependencia
 

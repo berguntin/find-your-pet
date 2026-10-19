@@ -1,7 +1,7 @@
 <script setup lang="ts">
     import ButtonShare from '@/components/social/ButtonShare.vue'
 
-    const props = defineProps<{
+    defineProps<{
         pet: Pet
     }>()
 </script>
@@ -10,12 +10,12 @@
     <div class="card bg-base-100 shadow-xl overflow-hidden">
         <figure class="relative h-[300px]">
             <Swiper class="w-full h-[300px]" :loop="true">
-                <SwiperSlide v-for="(image, index) in pet.images" :key="pet.id">
+                <SwiperSlide v-for="(image, index) in pet.images" :key="image">
                     <img
                         loading="lazy"
                         :class="['w-full h-80 object-cover', !pet.alive ? 'blur-md' : '']"
                         :src="image"
-                        :alt="`${pet.name} - Image ${index + 1}`"
+                        :alt="`${pet.name || $t(pet.species)} - ${index + 1}`"
                     />
                 </SwiperSlide>
             </Swiper>
@@ -24,16 +24,16 @@
                 <Icon name="el:eye-close" />
                 <span>{{ $t('sensible_content') }}</span>
             </div>
-            <div v-if="pet.athome" class="absolute top-2 left-2 badge badge-primary badge-lg gap-2 p-4 z-10">
+            <div v-if="pet.resolution === 'reunited'" class="absolute top-2 left-2 badge badge-primary badge-lg gap-2 p-4 z-10">
                 <Icon name="material-symbols:home-outline" />
                 {{ $t('reunited_with_his_family') }}
             </div>
             <div
-                v-if="!pet.athome"
+                v-else
                 class="absolute top-2 right-2 badge badge-lg text-gray-100 z-10"
-                :class="pet.status === 'lost' ? 'badge-error' : 'badge-warning text-gray-900'"
+                :class="pet.reportType === 'lost' ? 'badge-error' : 'badge-warning text-gray-900'"
             >
-                {{ pet.status === 'lost' ? $t('searching_me') : $t('found_me') }}
+                {{ pet.reportType === 'lost' ? $t('searching_me') : $t('found_me') }}
             </div>
         </figure>
         <div class="card-body p-4">
@@ -44,7 +44,7 @@
                 </div>
                 <div class="flex items-center">
                     <Icon name="mdi-light:calendar" />
-                    <span>{{ formatDate(pet.date) }}</span>
+                    <span>{{ formatDate(pet.eventDate) }}</span>
                 </div>
             </div>
             <div class="flex items-center justify-between mt-2">

@@ -8,7 +8,7 @@
                         <label class="label" for="status">
                             <span class="label-text">{{ $t('situation') }}</span>
                         </label>
-                        <select v-model="form.status" id="status" required class="select select-bordered w-full">
+                        <select v-model="form.reportType" id="status" required class="select select-bordered w-full">
                             <option value="lost">{{ $t('i_lost') }}</option>
                             <option value="found">{{ $t('i_found') }}</option>
                         </select>
@@ -18,10 +18,10 @@
                         <label class="label" for="type">
                             <span class="label-text"> {{ $t('type') }}</span>
                         </label>
-                        <select v-model="form.type" id="type" class="select select-bordered w-full">
-                            <option value="Perro">{{ $t('dog') }}</option>
-                            <option value="Gato">{{ $t('cat') }}</option>
-                            <option value="Otro">{{ $t('other') }}</option>
+                        <select v-model="form.species" id="type" class="select select-bordered w-full">
+                            <option value="dog">{{ $t('dog') }}</option>
+                            <option value="cat">{{ $t('cat') }}</option>
+                            <option value="other">{{ $t('other') }}</option>
                         </select>
                     </div>
 
@@ -41,7 +41,7 @@
                     </div>
                     <button
                         class="btn btn-secondary mt-2"
-                        :disabled="form.images.length < 0 && !gptLoading"
+                        :disabled="files.length === 0 || gptLoading"
                         type="button"
                         v-if="!showAllForm"
                         @click="showAllForm = true"
@@ -82,7 +82,7 @@
                                 <span class="label-text"> {{ $t('date') }}</span>
                             </label>
                             <input
-                                v-model="form.date"
+                                v-model="form.eventDate"
                                 type="date"
                                 id="date"
                                 :max="maxDate"
@@ -104,7 +104,7 @@
                             />
                         </div>
 
-                        <div v-if="form.status === 'found'" class="form-control">
+                        <div v-if="form.reportType === 'found'" class="form-control">
                             <span class="label-text">{{ $t('its_alive_question') }}</span>
                             <div class="flex flex-row gap-2">
                                 <label class="label justify-start gap-2">
@@ -158,31 +158,32 @@
 </template>
 
 <script setup lang="ts">
-    import type { CreatePetFormData } from '~/types/CreatePetFromData'
-    import type { UseFetchOptions } from 'nuxt/app'
+    import { FetchError } from 'ofetch'
+    import { PET_LIMITS, type ApiErrorDto, type ReportPetRequest } from '~~/contracts/pets'
     import AlertComponent from '~/components/AlertComponent.vue'
-    import { getChatGPTDescription } from '~/utils/chatGptUtils'
 
     interface Alert {
         type: 'error' | 'success'
         message: string
     }
 
-    const isSubmitting = ref(false)
+    type PetForm = Omit<ReportPetRequest, 'images'>
 
-    const form = ref<CreatePetFormData>({
-        type: 'Perro',
-        images: [],
-        description: '',
+    const api = usePetsApi()
+
+    const form = ref<PetForm>({
+        reportType: 'lost',
+        species: 'dog',
         name: '',
-        breed: '',
-        status: 'lost',
+        description: '',
         location: '',
-        alive: true,
         contact: '',
-        date: ''
+        alive: true,
+        eventDate: ''
     })
+    const files = ref<File[]>([])
 
+    const isSubmitting = ref(false)
     const alert = ref<Alert | null>(null)
     const showAllForm = ref(false)
     const maxDate = computed(() => new Date().toISOString().split('T')[0])
@@ -191,112 +192,59 @@
 
     const handleImageUpload = async (event: Event) => {
         const target = event.target as HTMLInputElement
-        if (target.files) {
-            const files = Array.from(target.files)
-            form.value.images.push(...files)
-
-            await chatGpt(files[0])
-        }
+        files.value = Array.from(target.files ?? []).slice(0, PET_LIMITS.maxImages)
+        if (files.value[0]) await analyzeImage(files.value[0])
     }
 
-    const chatGpt = async (file: File) => {
-        // Chat GPT
-        if (!gptLoading.value) {
-            gptLoading.value = true
-            try {
-                const gptResponse = await getChatGPTDescription(file, form.value.type ?? 'Otro')
-
-                const data = JSON.parse(gptResponse)
-
-                if (data.error) {
-                    gtpError.value = true
-                } else {
-                    const { data: pet } = data
-                    form.value = {
-                        ...form.value,
-                        description: pet.description,
-                        location: pet.location ?? '',
-                        contact: pet.contact ?? '',
-                        date: pet.date ?? '',
-                        name: pet.name ?? ''
-                    }
-                    showAllForm.value = true
-                    gtpError.value = false
+    /** Pre-fills the form from the first photo. The user can always correct or complete it. */
+    const analyzeImage = async (file: File) => {
+        if (gptLoading.value) return
+        gptLoading.value = true
+        try {
+            const image = await blobToDataUrl(await resizeImage(file, 512, 0.7))
+            const result = await api.describe(image)
+            gtpError.value = !result.isPet
+            if (result.isPet) {
+                form.value = {
+                    ...form.value,
+                    species: result.species ?? form.value.species,
+                    description: result.description ?? form.value.description,
+                    name: result.name ?? form.value.name,
+                    location: result.location ?? form.value.location,
+                    contact: result.contact ?? form.value.contact,
+                    eventDate: result.eventDate ?? form.value.eventDate
                 }
-
-                gptLoading.value = false
-            } catch (error) {
-                gptLoading.value = false
-                gtpError.value = true
-                console.error('Error fetching description:', error)
             }
+        } catch (error) {
+            gtpError.value = true
+            console.error('Error analyzing image:', error)
+        } finally {
+            gptLoading.value = false
+            showAllForm.value = true
         }
     }
 
     const submitForm = async () => {
         isSubmitting.value = true
-
-        let formData = new FormData()
-
-        Object.entries(form.value).forEach(([key, value]) => {
-            if (Array.isArray(value)) {
-                value.forEach(file => {
-                    formData.append(key, file)
-                })
-            } else {
-                formData.append(key, value.toString())
-            }
-        })
-
         try {
-            const response = await savePet(formData)
+            const resized = await Promise.all(files.value.map(file => resizeImage(file, 1600)))
+            const images = await Promise.all(resized.map(image => api.uploadImage(image)))
+            await api.report({ ...form.value, images })
 
-            if (!response || !response.ok) {
-                alert.value = {
-                    type: 'error',
-                    message: 'Ha ocurrido un error, por favor, inténtelo de nuevo'
-                }
-            } else {
-                alert.value = {
-                    type: 'success',
-                    message: 'Se ha registrado correctamente la mascota'
-                }
-            }
+            alert.value = { type: 'success', message: 'Se ha registrado correctamente la mascota' }
         } catch (error) {
-            alert.value = {
-                type: 'error',
-                message: 'Ha ocurrido un error, por favor, inténtelo de nuevo'
-            }
+            console.error('Error saving pet:', error)
+            alert.value = { type: 'error', message: errorMessage(error) }
         } finally {
             isSubmitting.value = false
+            window.scrollTo(0, 0)
         }
     }
 
-    async function savePet(formData: FormData): Promise<ApiResponse> {
-        const config: UseFetchOptions<ApiResponse> = {
-            method: 'POST',
-            body: formData
-        }
-
-        try {
-            const { data, error } = await useFetch<ApiResponse>('/api/pets', config)
-
-            window.scrollTo(0, 0)
-
-            if (error.value) {
-                console.error('Error saving pet:', error.value)
-                return { ok: false, error: error.value.message }
-            }
-
-            if (!data.value) {
-                return { ok: false, error: 'No data received from server' }
-            }
-
-            return { ok: true, data: data.value }
-        } catch (e) {
-            console.error('Unexpected error:', e)
-            return { ok: false, error: 'An unexpected error occurred' }
-        }
+    function errorMessage(error: unknown): string {
+        const apiError = error instanceof FetchError ? (error.data as ApiErrorDto | undefined)?.error : undefined
+        if (apiError?.code === 'validation') return 'Revisa los datos del formulario, alguno no es válido'
+        return 'Ha ocurrido un error, por favor, inténtelo de nuevo'
     }
 </script>
 

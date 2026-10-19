@@ -1,4 +1,3 @@
 export interface Filters {
-    status?: status
-    location?: string
+    reportType: ReportTypeFilter
 }

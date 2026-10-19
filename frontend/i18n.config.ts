@@ -58,7 +58,8 @@ export default defineI18nConfig(() => ({
             no: 'No',
             contact_examples: '(teléfono, email, instagram, etc..)',
             register_pet: 'Registrar mascota',
-            registering: 'Registrando...'
+            registering: 'Registrando...',
+            load_more: 'Cargar más'
         },
         en: {
             welcome: 'Welcome',
@@ -114,7 +115,8 @@ export default defineI18nConfig(() => ({
             no: 'No',
             contact_examples: '(phone, email, instagram, etc..)',
             register_pet: 'Register pet',
-            registering: 'Registering...'
+            registering: 'Registering...',
+            load_more: 'Load more'
         }
     }
 }))

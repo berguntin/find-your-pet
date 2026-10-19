@@ -20,14 +20,14 @@ export const useMetadata = (pet: Pet | null): Metadata => {
     }
 
     const getTitle = () => {
-        if (pet.athome) {
+        if (pet.resolution === 'reunited') {
             return `${pet.name || 'Esta mascota'} ya está con su familia!`
         }
-        return pet.status === 'lost' ? `Ayúdame a encontrar a ${pet.name || 'mi mascota'}` : `¿Alguien lo busca?`
+        return pet.reportType === 'lost' ? `Ayúdame a encontrar a ${pet.name || 'mi mascota'}` : `¿Alguien lo busca?`
     }
 
-    const getText = (): String => {
-        if (pet.athome) {
+    const getText = (): string => {
+        if (pet.resolution === 'reunited') {
             return 'Una historia con final feliz'
         }
         if (!pet.alive) {
@@ -36,9 +36,9 @@ export const useMetadata = (pet: Pet | null): Metadata => {
         return truncateDescription() || 'Mascotas perdidas y encontradas DANA Valencia'
     }
 
-    const getHastags = (): String => {
-        let hashtags = []
-        hashtags.push(pet.status == 'lost' ? 'perdido' : 'encontrado')
+    const getHastags = (): string => {
+        const hashtags: string[] = []
+        hashtags.push(pet.reportType === 'lost' ? 'perdido' : 'encontrado')
         hashtags.push('DANA')
         hashtags.push('VLC')
         hashtags.push('ayuda')
@@ -46,7 +46,7 @@ export const useMetadata = (pet: Pet | null): Metadata => {
         return hashtags.join(',')
     }
 
-    const getImage = (): String => {
+    const getImage = (): string => {
         if (!pet.alive) {
             return `${config.public.baseUrl}/images/sensitive_content.webp`
         }

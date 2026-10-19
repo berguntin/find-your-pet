@@ -1,9 +1,9 @@
 export interface Metadata {
-    title: String
-    text: String
-    hastags: String
-    quote: String
-    image: String
-    url: String
-    via: String
+    title: string
+    text: string
+    hastags: string
+    quote: string
+    image: string
+    url: string
+    via: string
 }

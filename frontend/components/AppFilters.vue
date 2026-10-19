@@ -3,15 +3,11 @@
         (e: '@setFilter', data: Filters): void
     }>()
 
-    const actualStatus = ref<status>('all')
-    const actualLocation = ref('')
+    const actualStatus = ref<ReportTypeFilter>('all')
 
-    const handleStatus = (status: status) => {
-        actualStatus.value = status
-        emit('@setFilter', {
-            status: actualStatus.value,
-            location: actualLocation.value
-        })
+    const handleStatus = (reportType: ReportTypeFilter) => {
+        actualStatus.value = reportType
+        emit('@setFilter', { reportType })
     }
 </script>
 

@@ -15,40 +15,53 @@
         ]
     })
 
-    const actualFilters = ref<Filters>({
-        status: 'all',
-        location: ''
+    const api = usePetsApi()
+    const reportType = ref<ReportTypeFilter>('all')
+    const search = ref('')
+
+    const query = computed(() => ({
+        reportType: reportType.value === 'all' ? undefined : reportType.value,
+        q: search.value || undefined
+    }))
+
+    // First page is rendered on the server; "load more" pages are appended on the client.
+    const { data: firstPage, status, error } = await useAsyncData('pets', () => api.list(query.value), {
+        watch: [query]
     })
 
-    const search = ref<String>('')
-   
-    const { data: pets, status, error } = await useFetch<Pet[]>(`/api/pets`)
-    
-    
-    const getPets = computed(() => {
-        if (!pets.value) return []
+    const morePets = ref<Pet[]>([])
+    const nextCursor = ref<string | null>(null)
+    const loadingMore = ref(false)
 
-        return pets.value.filter(pet => {
-            const matchesSearch = search.value
-                ? Object.values(pet).some(value => {
-                      if (typeof value !== 'string') return false
-                      return value.toLowerCase().includes(search.value.toLowerCase())
-                  })
-                : true
+    watch(
+        firstPage,
+        page => {
+            morePets.value = []
+            nextCursor.value = page?.nextCursor ?? null
+        },
+        { immediate: true }
+    )
 
-            const matchesStatus =
-                actualFilters.value.status !== 'all' ? pet.status === actualFilters.value.status : true
+    const pets = computed(() => [...(firstPage.value?.items ?? []), ...morePets.value])
 
-            return matchesSearch && matchesStatus
-        })
-    })
-
-    const setFilter = (filters: Filters) => {
-        actualFilters.value = filters
+    const loadMore = async () => {
+        if (!nextCursor.value || loadingMore.value) return
+        loadingMore.value = true
+        try {
+            const page = await api.list({ ...query.value, cursor: nextCursor.value })
+            morePets.value.push(...page.items)
+            nextCursor.value = page.nextCursor
+        } finally {
+            loadingMore.value = false
+        }
     }
 
-    const handleSearch = (query: String) => {
-        search.value = query
+    const setFilter = (filters: Filters) => {
+        reportType.value = filters.reportType
+    }
+
+    const handleSearch = (text: string) => {
+        search.value = text
     }
 </script>
 
@@ -59,5 +72,11 @@
     <ClientOnly>
         <AppLoading v-if="status === 'pending'" class="text-center py-8" />
     </ClientOnly>
-    <ListPets :pets="getPets" />
+    <ListPets :pets="pets" />
+    <div v-if="nextCursor" class="flex justify-center mb-8">
+        <button class="btn btn-primary" :disabled="loadingMore" @click="loadMore">
+            <span v-if="loadingMore" class="loading loading-spinner"></span>
+            {{ $t('load_more') }}
+        </button>
+    </div>
 </template>
