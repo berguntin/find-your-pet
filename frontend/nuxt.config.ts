@@ -76,6 +76,11 @@ export default defineNuxtConfig({
             url: '',
             token: ''
         },
+        facebook: {
+            pageId: '',
+            pageToken: '',
+            graphVersion: 'v24.0'
+        },
         public: {
             baseUrl: 'http://localhost:8000' // en vercel agregar NUXT_PUBLIC_BASE_URL=https://mascotasdana.es
         }

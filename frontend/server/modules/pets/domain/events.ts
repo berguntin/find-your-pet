@@ -6,4 +6,7 @@ export type PetPublished = RecordedEvent<'pet.published', { petId: string }>
 /** The pet is back with its family. */
 export type PetReunited = RecordedEvent<'pet.reunited', { petId: string }>
 
-export type PetEvent = PetPublished | PetReunited
+/** The pet was deleted: by whoever manages it, or rejected by an admin. */
+export type PetRemoved = RecordedEvent<'pet.removed', { petId: string }>
+
+export type PetEvent = PetPublished | PetReunited | PetRemoved

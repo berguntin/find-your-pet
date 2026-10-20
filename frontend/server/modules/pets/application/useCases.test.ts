@@ -234,6 +234,10 @@ describe('pet use cases', () => {
 
             expect(await repository.findById(pet.id)).toBeNull()
             expect(images.deleted).toEqual(pet.toSnapshot().images)
+            expect(repository.outbox.pending().map(e => [e.type, e.payload])).toContainEqual([
+                'pet.removed',
+                { petId: pet.id }
+            ])
         })
     })
 

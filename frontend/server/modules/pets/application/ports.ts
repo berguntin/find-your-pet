@@ -20,7 +20,8 @@ export interface PetRepository {
     save(pet: Pet): Promise<void>
     findById(id: string): Promise<Pet | null>
     findByIds(ids: string[]): Promise<Pet[]>
-    delete(id: string): Promise<void>
+    /** Deletes the pet and stores its recorded events (e.g. `pet.removed`) atomically. */
+    delete(pet: Pet): Promise<void>
     search(criteria: PetSearchCriteria): Promise<Page<Pet>>
     /** Every image URL used by any pet, to find orphan uploads. */
     listAllImageUrls(): Promise<string[]>
@@ -118,4 +119,28 @@ export interface PetEmbeddingIndex {
     findSimilar(vector: number[], model: string, limit: number, source: EmbeddingSource): Promise<SimilarPet[]>
     /** The given pets that already have vectors for the model. */
     findIndexed(petIds: string[], model: string): Promise<Set<string>>
+}
+
+export interface SocialPost {
+    message: string
+    /** Publicly reachable image URLs, in display order. */
+    imageUrls: string[]
+}
+
+/** A page or account of ours on a social network where pets are announced. */
+export interface SocialPublisher {
+    /** Identifies the network in stored posts, e.g. 'facebook'. */
+    readonly network: string
+    /** Returns the post's id on the network. */
+    publish(post: SocialPost): Promise<string>
+    updateMessage(postId: string, message: string): Promise<void>
+    /** Posts already deleted on the network count as removed. */
+    remove(postId: string): Promise<void>
+}
+
+/** Which post announces each pet on each network, so events are handled once and posts can be updated. */
+export interface SocialPostRepository {
+    find(petId: string, network: string): Promise<string | null>
+    save(petId: string, network: string, postId: string, publishedAt: Date): Promise<void>
+    remove(petId: string, network: string): Promise<void>
 }

@@ -1,6 +1,6 @@
 # Plan: integración con Facebook
 
-> **Estado (20/10/2026):** propuesta, sin implementar.
+> **Estado (20/10/2026):** la fase 1 (sección 3) está implementada en `feat/facebook-page`, dentro del módulo `pets` (`application/social.ts`, `domain/socialPost.ts`, `infrastructure/FacebookPageSocialPublisher.ts`). Falta la preparación manual de 3.1 (Página, app de Meta y token). Sin `NUXT_FACEBOOK_PAGE_ID` y `NUXT_FACEBOOK_PAGE_TOKEN` no se publica nada. Las fases 2 a 4 siguen sin implementar.
 
 Los grupos de Facebook de mascotas perdidas son una de las mayores fuentes de avisos. Este plan cubre dos integraciones:
 

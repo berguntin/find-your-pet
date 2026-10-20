@@ -16,6 +16,12 @@ import type {
     PetRepository
 } from './application/ports'
 import {
+    PublishPetToSocial,
+    RemoveSocialPost,
+    UpdateSocialPostOnReunion,
+    type SocialPublishingDependencies
+} from './application/social'
+import {
     AuthorizeImageUpload,
     CleanUpOrphanImages,
     DeletePet,
@@ -70,7 +76,7 @@ export function createPetsModule({
         get: new GetPet(pets),
         markAsReunited: new MarkPetAsReunited(pets, clock),
         moderate: new ModeratePet(pets, images, clock, reportError),
-        delete: new DeletePet(pets, images, reportError),
+        delete: new DeletePet(pets, images, clock, reportError),
         describe: new DescribePetFromImage(describer),
         authorizeImageUpload: new AuthorizeImageUpload(images),
         cleanUpOrphanImages: new CleanUpOrphanImages(pets, images, clock),
@@ -80,15 +86,39 @@ export function createPetsModule({
     }
 }
 
+function petIdOf(payload: Record<string, unknown>): string {
+    if (typeof payload.petId !== 'string') throw new Error('Event without petId')
+    return payload.petId
+}
+
 /** Events the pets module reacts to, for the outbox registry. */
 export function petsEventHandlers(module: PetsModule) {
-    const petId = (payload: Record<string, unknown>) => {
-        if (typeof payload.petId !== 'string') throw new Error('Event without petId')
-        return payload.petId
-    }
     return {
         'pet.published': async (event: { payload: Record<string, unknown> }) =>
-            module.indexForSearch.execute(petId(event.payload))
+            module.indexForSearch.execute(petIdOf(event.payload))
+    }
+}
+
+/** Announces pets on a social network of ours. Separate from the module so it is only built when configured. */
+export function createSocialPublishing(deps: SocialPublishingDependencies) {
+    return {
+        publish: new PublishPetToSocial(deps),
+        updateOnReunion: new UpdateSocialPostOnReunion(deps),
+        remove: new RemoveSocialPost(deps)
+    }
+}
+
+export type SocialPublishing = ReturnType<typeof createSocialPublishing>
+
+/** Events social publishing reacts to, for the outbox registry. */
+export function socialEventHandlers(social: SocialPublishing) {
+    return {
+        'pet.published': async (event: { payload: Record<string, unknown> }) =>
+            social.publish.execute(petIdOf(event.payload)),
+        'pet.reunited': async (event: { payload: Record<string, unknown> }) =>
+            social.updateOnReunion.execute(petIdOf(event.payload)),
+        'pet.removed': async (event: { payload: Record<string, unknown> }) =>
+            social.remove.execute(petIdOf(event.payload))
     }
 }
 
