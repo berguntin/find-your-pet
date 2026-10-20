@@ -13,9 +13,6 @@
             <AppLogo />
 
             <nav class="hidden items-center gap-2 md:flex" :aria-label="$t('main_navigation')">
-                <NuxtLink to="/" class="btn btn-ghost btn-sm" active-class="bg-base-200">{{
-                    $t('nav_search')
-                }}</NuxtLink>
                 <LanguageSwitch class="mx-2" />
                 <NuxtLink to="/registrar" class="btn btn-primary btn-sm">
                     <Icon name="mdi:plus" size="1.1rem" />
@@ -43,9 +40,6 @@
         <Transition name="menu">
             <div v-if="menuOpen" id="mobile-menu" class="border-t border-base-300/70 bg-base-100 md:hidden">
                 <nav class="mx-auto flex max-w-6xl flex-col gap-1 px-4 py-3" :aria-label="$t('main_navigation')">
-                    <NuxtLink to="/" class="btn btn-ghost justify-start">
-                        <Icon name="mdi:magnify" size="1.25rem" /> {{ $t('nav_search') }}
-                    </NuxtLink>
                     <NuxtLink to="/registrar" class="btn btn-ghost justify-start">
                         <Icon name="mdi:plus-circle-outline" size="1.25rem" /> {{ $t('publish_report') }}
                     </NuxtLink>

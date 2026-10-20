@@ -41,7 +41,7 @@
                 v-model="searchQuery"
                 type="search"
                 :placeholder="$t('search_placeholder')"
-                class="input w-full rounded-full border-base-300 bg-white pl-12 pr-12 text-base shadow-sm focus:border-primary sm:input-lg"
+                class="input w-full rounded-full border-base-300 bg-white !pl-12 !pr-12 text-base shadow-sm focus:border-primary sm:input-lg"
                 @input="handleSearch"
             />
             <button
