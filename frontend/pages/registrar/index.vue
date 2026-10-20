@@ -38,8 +38,13 @@
     const analysis = ref<'filled' | 'failed' | null>(null)
     let analyzedFile: File | null = null
 
-    /** From this match a published pet is likely the same animal, so it is worth checking first. */
-    const SIMILAR_PET_MIN_MATCH = 70
+    /**
+     * From this match a published pet may be the same animal, so it is worth checking first. With the
+     * calibration from scripts/eval-embeddings.ts (floor 0.70, ceiling 0.85) it is a similarity of 0.775:
+     * most photos of the same animal reach it and about 95% of different animals stay below.
+     * It is only a hint, so a false positive costs little.
+     */
+    const SIMILAR_PET_MIN_MATCH = 50
     const similarPets = ref<PetMatchDto[]>([])
 
     const submitting = ref(false)
