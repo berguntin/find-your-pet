@@ -1,6 +1,12 @@
 <script setup lang="ts">
     import { FetchError } from 'ofetch'
-    import { PET_LIMITS, type ApiErrorDto, type PetDto, type ReportPetRequest } from '~~/contracts/pets'
+    import {
+        PET_LIMITS,
+        type ApiErrorDto,
+        type PetDto,
+        type PetMatchDto,
+        type ReportPetRequest
+    } from '~~/contracts/pets'
 
     const { t } = useI18n()
     useHead(() => ({ title: `${t('publish_report')} · ${t('app_name')}` }))
@@ -31,6 +37,10 @@
     const analyzing = ref(false)
     const analysis = ref<'filled' | 'failed' | null>(null)
     let analyzedFile: File | null = null
+
+    /** From this match a published pet is likely the same animal, so it is worth checking first. */
+    const SIMILAR_PET_MIN_MATCH = 70
+    const similarPets = ref<PetMatchDto[]>([])
 
     const submitting = ref(false)
     const progress = ref('')
@@ -71,36 +81,49 @@
 
     onBeforeUnmount(() => photos.value.forEach(photo => URL.revokeObjectURL(photo.preview)))
 
-    /** Pre-fills the details from the first photo; the user can always correct or complete them. */
+    /** Pre-fills the details from the main photo and looks for published pets that may be the same animal. */
     const goToDetails = async () => {
-        const first = photos.value[0]?.file
-        if (!first) return
-        if (first !== analyzedFile) {
+        const main = photos.value[0]?.file
+        if (!main) return
+        if (main !== analyzedFile) {
             analyzing.value = true
-            try {
-                const image = await blobToDataUrl(await resizeImage(first, 512, 0.7))
-                const result = await api.describe(image)
-                analysis.value = result.isPet ? 'filled' : 'failed'
-                if (result.isPet) {
-                    form.value = {
-                        ...form.value,
-                        species: result.species ?? form.value.species,
-                        description: form.value.description || result.description || '',
-                        name: form.value.name || result.name || '',
-                        location: form.value.location || result.location || '',
-                        contact: form.value.contact || result.contact || '',
-                        eventDate: form.value.eventDate || result.eventDate || ''
-                    }
-                }
-            } catch {
-                analysis.value = 'failed'
-            } finally {
-                analyzedFile = first
-                analyzing.value = false
-            }
+            await Promise.all([prefillFromPhoto(main), findSimilarPets(main)])
+            analyzedFile = main
+            analyzing.value = false
         }
         step.value = 2
         window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+
+    /** The user can always correct or complete what the photo gives. */
+    const prefillFromPhoto = async (file: File) => {
+        try {
+            const result = await api.describe(await blobToDataUrl(await resizeImage(file, 512, 0.7)))
+            analysis.value = result.isPet ? 'filled' : 'failed'
+            if (result.isPet) {
+                form.value = {
+                    ...form.value,
+                    species: result.species ?? form.value.species,
+                    description: form.value.description || result.description || '',
+                    name: form.value.name || result.name || '',
+                    location: form.value.location || result.location || '',
+                    contact: form.value.contact || result.contact || '',
+                    eventDate: form.value.eventDate || result.eventDate || ''
+                }
+            }
+        } catch {
+            analysis.value = 'failed'
+        }
+    }
+
+    /** A hint only: if the search is unavailable or fails, the report goes on as usual. */
+    const findSimilarPets = async (file: File) => {
+        try {
+            const { items } = await api.searchByImage(await blobToDataUrl(await resizeImage(file, 768, 0.8)))
+            similarPets.value = items.filter(item => item.match >= SIMILAR_PET_MIN_MATCH).slice(0, 3)
+        } catch {
+            similarPets.value = []
+        }
     }
 
     const submitForm = async () => {
@@ -130,6 +153,7 @@
         form.value = { ...form.value, name: '', description: '', location: '', eventDate: '', alive: true }
         published.value = null
         analysis.value = null
+        similarPets.value = []
         analyzedFile = null
         step.value = 1
     }
@@ -305,6 +329,45 @@
 
             <!-- Step 2: details and contact -->
             <form v-else class="mt-6 space-y-5" @submit.prevent="submitForm">
+                <section v-if="similarPets.length" role="status" class="surface space-y-3 p-4 ring-2 ring-accent">
+                    <div class="flex items-start gap-3">
+                        <Icon name="mdi:paw" size="1.5rem" class="shrink-0 text-accent" />
+                        <div>
+                            <h2 class="font-bold">{{ $t('similar_pets_title') }}</h2>
+                            <p class="text-sm text-muted">{{ $t('similar_pets_text') }}</p>
+                        </div>
+                    </div>
+                    <ul class="space-y-2">
+                        <li v-for="{ pet, match } in similarPets" :key="pet.id">
+                            <NuxtLink
+                                :to="{ name: 'mascota-id', params: { id: pet.id } }"
+                                target="_blank"
+                                class="flex items-center gap-3 rounded-xl bg-base-200/60 p-2 transition hover:bg-base-200"
+                            >
+                                <img
+                                    :src="pet.images[0]"
+                                    alt=""
+                                    class="h-14 w-14 shrink-0 rounded-lg object-cover"
+                                    :class="{ 'blur-sm': !pet.alive }"
+                                />
+                                <span class="min-w-0 flex-1">
+                                    <span class="block truncate font-semibold">
+                                        {{ pet.name || $t(`unnamed_${pet.species}`) }}
+                                    </span>
+                                    <span class="block truncate text-sm text-muted">
+                                        {{ $t(pet.reportType === 'lost' ? 'status_lost' : 'status_found') }} · {{ pet.location }}
+                                    </span>
+                                </span>
+                                <span class="shrink-0 text-sm font-extrabold text-accent">
+                                    {{ $t('match_percentage', { match }) }}
+                                </span>
+                                <Icon name="mdi:open-in-new" class="shrink-0 text-muted" />
+                            </NuxtLink>
+                        </li>
+                    </ul>
+                    <p class="text-sm text-muted">{{ $t('similar_pets_continue') }}</p>
+                </section>
+
                 <div v-if="analysis === 'filled'" role="status" class="alert bg-base-200">
                     <Icon name="mdi:auto-fix" size="1.5rem" class="text-primary" />
                     <span>{{ $t('analysis_filled') }}</span>
