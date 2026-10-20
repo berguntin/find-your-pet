@@ -6,9 +6,6 @@ export default defineNuxtConfig({
         port: 8000
     },
     modules: ['@nuxtjs/tailwindcss', '@nuxt/icon', 'nuxt-swiper', '@nuxt/content', '@nuxtjs/i18n'],
-    content: {
-        documentDriven: true
-    },
     app: {
         head: {
             title: 'Mascotas Encontradas',

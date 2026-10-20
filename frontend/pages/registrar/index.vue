@@ -58,6 +58,12 @@
         if (removed) URL.revokeObjectURL(removed.preview)
     }
 
+    /** The first photo is the main one: it is shown on cards and used to pre-fill the details. */
+    const setMainPhoto = (index: number) => {
+        const [photo] = photos.value.splice(index, 1)
+        if (photo) photos.value.unshift(photo)
+    }
+
     const onDrop = (event: DragEvent) => {
         dragging.value = false
         addFiles(event.dataTransfer?.files)
@@ -254,12 +260,23 @@
                     </label>
                     <ul v-if="photos.length" class="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-4">
                         <li v-for="(photo, index) in photos" :key="photo.preview" class="relative aspect-square">
-                            <img :src="photo.preview" alt="" class="h-full w-full rounded-xl object-cover" />
-                            <span
-                                v-if="index === 0"
-                                class="absolute bottom-1 left-1 rounded-full bg-neutral/80 px-2 text-xs text-neutral-content"
+                            <button
+                                type="button"
+                                class="block h-full w-full rounded-xl"
+                                :class="index === 0 ? 'ring-2 ring-primary ring-offset-2' : 'opacity-90 hover:opacity-100'"
+                                :aria-label="index === 0 ? $t('main_photo') : $t('set_main_photo')"
+                                :aria-pressed="index === 0"
+                                :title="index === 0 ? $t('main_photo') : $t('set_main_photo')"
+                                @click="setMainPhoto(index)"
                             >
-                                {{ $t('main_photo') }}
+                                <img :src="photo.preview" alt="" class="h-full w-full rounded-xl object-cover" />
+                            </button>
+                            <span
+                                class="pointer-events-none absolute bottom-1 left-1 flex items-center gap-1 rounded-full px-2 text-xs"
+                                :class="index === 0 ? 'bg-primary text-primary-content' : 'bg-neutral/60 text-neutral-content'"
+                            >
+                                <Icon :name="index === 0 ? 'mdi:star' : 'mdi:star-outline'" />
+                                <template v-if="index === 0">{{ $t('main_photo') }}</template>
                             </span>
                             <button
                                 type="button"
