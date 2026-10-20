@@ -37,6 +37,7 @@ const { default: adminListPets } = await import('../api/v1/admin/pets/index.get'
 const { default: moderatePet } = await import('../api/v1/admin/pets/[id]/moderation.patch')
 const { default: processOutbox } = await import('../api/internal/outbox/process')
 const { default: cleanUpImages } = await import('../api/internal/images/cleanup')
+const { default: backfillSearch } = await import('../api/internal/search/backfill')
 
 const router = createRouter()
     .get('/api/v1/pets', listPets)
@@ -51,6 +52,7 @@ const router = createRouter()
     .patch('/api/v1/admin/pets/:id/moderation', moderatePet)
     .use('/api/internal/outbox/process', processOutbox)
     .use('/api/internal/images/cleanup', cleanUpImages)
+    .use('/api/internal/search/backfill', backfillSearch)
 const handler = toWebHandler(createApp().use(router))
 
 const ADMIN_TOKEN = 'admin-token'
@@ -486,7 +488,7 @@ describe('admin moderation endpoints', () => {
 })
 
 describe('internal endpoints', () => {
-    it.each(['/api/internal/outbox/process', '/api/internal/images/cleanup'])(
+    it.each(['/api/internal/outbox/process', '/api/internal/images/cleanup', '/api/internal/search/backfill'])(
         'reject calls without the internal token: %s',
         async path => {
             expect((await call('POST', path)).status).toBe(401)
@@ -503,6 +505,16 @@ describe('internal endpoints', () => {
         expect(status).toBe(200)
         expect(body).toEqual({ processed: 2, failed: 0 })
         expect(repository.outbox.pending()).toEqual([])
+    })
+
+    it('indexes published pets missing from search', async () => {
+        await createPet()
+
+        const { status, body } = await call('POST', '/api/internal/search/backfill', { token: INTERNAL_TOKEN })
+
+        expect(status).toBe(200)
+        expect(body).toEqual({ indexed: 1, failed: 0, remaining: 0 })
+        expect(embeddingIndex.entries.size).toBe(1)
     })
 
     it('accepts Vercel Cron calls with CRON_SECRET', async () => {

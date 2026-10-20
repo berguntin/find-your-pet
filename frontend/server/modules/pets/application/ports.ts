@@ -116,4 +116,6 @@ export interface PetEmbeddingIndex {
     remove(petId: string): Promise<void>
     /** Pets whose vectors of `source` are closest, best vector per pet, most similar first. */
     findSimilar(vector: number[], model: string, limit: number, source: EmbeddingSource): Promise<SimilarPet[]>
+    /** The given pets that already have vectors for the model. */
+    findIndexed(petIds: string[], model: string): Promise<Set<string>>
 }
