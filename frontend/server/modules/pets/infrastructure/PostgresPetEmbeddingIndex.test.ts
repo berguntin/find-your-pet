@@ -101,7 +101,7 @@ describe.skipIf(!url)('PostgresPetEmbeddingIndex', () => {
             images: [{ imageUrl: 'https://img/1.jpg', vector: vector(0) }],
             text: vector(9)
         })
-        await pets.delete(ids[0]!)
+        await pets.delete((await pets.findById(ids[0]!))!)
 
         expect(await sql`select 1 from pet_image_embeddings`).toHaveLength(0)
         expect(await sql`select 1 from pet_text_embeddings`).toHaveLength(0)

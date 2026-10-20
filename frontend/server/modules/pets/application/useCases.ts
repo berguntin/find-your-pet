@@ -110,13 +110,14 @@ export class DeletePet {
     constructor(
         private readonly pets: PetRepository,
         private readonly images: ImageStorage,
+        private readonly clock: Clock,
         private readonly reportError: ErrorReporter
     ) {}
 
     async execute(id: string, actor: Actor): Promise<void> {
         const pet = await findPet(this.pets, id)
         pet.assertCanBeManagedBy(actor)
-        await deleteWithImages(pet, this.pets, this.images, this.reportError)
+        await deleteWithImages(pet, this.pets, this.images, this.clock, this.reportError)
     }
 }
 
@@ -134,7 +135,7 @@ export class ModeratePet {
         const pet = await findPet(this.pets, id)
 
         if (decision === 'rejected') {
-            await deleteWithImages(pet, this.pets, this.images, this.reportError)
+            await deleteWithImages(pet, this.pets, this.images, this.clock, this.reportError)
             return null
         }
 
@@ -200,9 +201,11 @@ async function deleteWithImages(
     pet: Pet,
     pets: PetRepository,
     images: ImageStorage,
+    clock: Clock,
     reportError: ErrorReporter
 ): Promise<void> {
-    await pets.delete(pet.id)
+    pet.recordRemoval(clock.now())
+    await pets.delete(pet)
     // The pet is already gone; leftover images are removed later by the orphan cleanup.
     await images.delete(pet.toSnapshot().images).catch(error => reportError(error, 'delete-images'))
 }

@@ -143,4 +143,26 @@ describe('withRawSecrets', () => {
 
         expect(config.upstash).toEqual({ url: 'https://mine.test', token: 'mine' })
     })
+
+    it('reads the Facebook Page id and token exactly as written, and the public base URL', () => {
+        const config = parseServerConfig(
+            withRawSecrets(runtimeConfig({ public: { baseUrl: 'https://mascotas.example' } }), {
+                NUXT_FACEBOOK_PAGE_ID: '1234567890123456789',
+                NUXT_FACEBOOK_PAGE_TOKEN: 'EAAB-page-token'
+            })
+        )
+
+        expect(config.facebook).toEqual({
+            pageId: '1234567890123456789',
+            pageToken: 'EAAB-page-token',
+            graphVersion: 'v24.0'
+        })
+        expect(config.baseUrl).toBe('https://mascotas.example')
+    })
+
+    it('leaves the Facebook Page off when it is not configured', () => {
+        const config = parseServerConfig(withRawSecrets(runtimeConfig(), {}))
+
+        expect(config.facebook).toEqual({ pageId: undefined, pageToken: undefined, graphVersion: 'v24.0' })
+    })
 })

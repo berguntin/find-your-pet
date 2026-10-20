@@ -166,6 +166,11 @@ export class Pet {
         this.events.push({ type: 'pet.reunited', occurredAt: now, payload: { petId: this.props.id } })
     }
 
+    /** Records the deletion so others can clean up after the pet; the repository deletes it. */
+    recordRemoval(now: Date): void {
+        this.events.push({ type: 'pet.removed', occurredAt: now, payload: { petId: this.props.id } })
+    }
+
     private recordPublished(now: Date): void {
         this.events.push({ type: 'pet.published', occurredAt: now, payload: { petId: this.props.id } })
     }

@@ -21,6 +21,8 @@ type RuntimeConfigInput = Record<string, unknown> & {
     openai?: Section
     gemini?: Section
     upstash?: Section
+    facebook?: Section
+    public?: Section
 }
 
 export function withRawSecrets(
@@ -34,6 +36,7 @@ export function withRawSecrets(
         adminToken: raw('NUXT_ADMIN_TOKEN', runtimeConfig.adminToken),
         internalToken: raw('NUXT_INTERNAL_TOKEN', runtimeConfig.internalToken),
         cronSecret: env.CRON_SECRET,
+        baseUrl: runtimeConfig.public?.baseUrl,
         cloudinary: {
             ...runtimeConfig.cloudinary,
             cloudName: raw('NUXT_CLOUDINARY_CLOUD_NAME', runtimeConfig.cloudinary?.cloudName),
@@ -47,6 +50,12 @@ export function withRawSecrets(
         gemini: {
             ...runtimeConfig.gemini,
             apiKey: raw('NUXT_GEMINI_API_KEY', runtimeConfig.gemini?.apiKey)
+        },
+        // A Page id has more digits than a JS number can hold exactly.
+        facebook: {
+            ...runtimeConfig.facebook,
+            pageId: raw('NUXT_FACEBOOK_PAGE_ID', runtimeConfig.facebook?.pageId),
+            pageToken: raw('NUXT_FACEBOOK_PAGE_TOKEN', runtimeConfig.facebook?.pageToken)
         },
         // Also accept the variable names the Upstash integration for Vercel creates.
         upstash: {
@@ -110,7 +119,20 @@ const configSchema = z.object({
             url: optional(),
             token: optional()
         })
-        .default({})
+        .default({}),
+    facebook: z
+        .object({
+            /** Optional: without both values, pets are not announced on our Facebook Page. */
+            pageId: optional(),
+            pageToken: optional(),
+            graphVersion: z
+                .string()
+                .regex(/^v\d+\.\d+$/, 'graphVersion must look like v24.0')
+                .default('v24.0')
+        })
+        .default({}),
+    /** Public URL of the site, for links to pet pages in social posts. */
+    baseUrl: z.string().url().default('http://localhost:8000')
 })
 
 export type ServerConfig = z.infer<typeof configSchema>

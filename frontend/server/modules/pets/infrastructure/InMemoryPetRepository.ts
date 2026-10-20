@@ -30,8 +30,9 @@ export class InMemoryPetRepository implements PetRepository {
         })
     }
 
-    async delete(id: string): Promise<void> {
-        this.pets.delete(id)
+    async delete(pet: Pet): Promise<void> {
+        this.pets.delete(pet.id)
+        this.outbox.append(pet.pullEvents())
     }
 
     async search(criteria: PetSearchCriteria): Promise<Page<Pet>> {

@@ -94,12 +94,16 @@ describe.skipIf(!url)('PostgresPetRepository', () => {
         expect((await repository.findById(pet.id))?.isReunited).toBe(true)
     })
 
-    it('deletes', async () => {
+    it('deletes and stores the recorded events', async () => {
         const pet = report('00000000-0000-4000-8000-000000000001')
         await repository.save(pet)
-        await repository.delete(pet.id)
+        pet.recordRemoval(new Date('2026-10-20T00:00:00Z'))
+        await repository.delete(pet)
 
         expect(await repository.findById(pet.id)).toBeNull()
+        expect(await sql`select type, payload from outbox`).toEqual([
+            { type: 'pet.removed', payload: { petId: pet.id } }
+        ])
     })
 
     it('filters, searches and paginates newest first', async () => {

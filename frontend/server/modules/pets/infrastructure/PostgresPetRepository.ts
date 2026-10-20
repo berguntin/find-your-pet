@@ -107,8 +107,13 @@ export class PostgresPetRepository implements PetRepository {
         return rows.map(toDomain)
     }
 
-    async delete(id: string): Promise<void> {
-        await this.sql`delete from pets where id = ${id}`
+    async delete(pet: Pet): Promise<void> {
+        const events = pet.pullEvents()
+        await this.sql.begin(async transaction => {
+            const sql = transaction as unknown as Database
+            await sql`delete from pets where id = ${pet.id}`
+            await appendToOutbox(sql, events)
+        })
     }
 
     async search(criteria: PetSearchCriteria): Promise<Page<Pet>> {

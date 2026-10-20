@@ -13,7 +13,13 @@ import { createDatabase } from './shared/infrastructure/database'
 import { PostgresOutboxStore } from './shared/infrastructure/PostgresOutboxStore'
 import { NoopRateLimiter, UpstashRateLimiter } from './shared/infrastructure/rateLimiters'
 import { GoogleGenAI } from '@google/genai'
-import { createPetsModule, petsEventHandlers, type PetsModule } from './modules/pets'
+import {
+    createPetsModule,
+    createSocialPublishing,
+    petsEventHandlers,
+    socialEventHandlers,
+    type PetsModule
+} from './modules/pets'
 import { CloudinaryImageStorage } from './modules/pets/infrastructure/CloudinaryImageStorage'
 import { GeminiEmbedder, UnavailableEmbedder } from './modules/pets/infrastructure/GeminiEmbedder'
 import {
@@ -27,6 +33,8 @@ import {
 } from './modules/pets/infrastructure/OpenAIPetDescriber'
 import { PostgresPetEmbeddingIndex } from './modules/pets/infrastructure/PostgresPetEmbeddingIndex'
 import { PostgresPetRepository } from './modules/pets/infrastructure/PostgresPetRepository'
+import { FacebookPageSocialPublisher } from './modules/pets/infrastructure/FacebookPageSocialPublisher'
+import { PostgresSocialPostRepository } from './modules/pets/infrastructure/PostgresSocialPostRepository'
 
 export interface Container {
     config: Pick<ServerConfig, 'adminToken' | 'internalToken' | 'cronSecret'>
@@ -54,10 +62,17 @@ function buildContainer(): Container {
     if (!config.upstash.url || !config.upstash.token) consola.warn('Upstash is not configured: rate limiting is off')
     if (!config.gemini.apiKey)
         consola.warn('NUXT_GEMINI_API_KEY is not set: image search is off and text search uses keywords only')
+    const facebookPage =
+        config.facebook.pageId && config.facebook.pageToken
+            ? { ...config.facebook, pageId: config.facebook.pageId, pageToken: config.facebook.pageToken }
+            : null
+    if (!facebookPage) consola.warn('The Facebook Page is not configured: pets are not announced on Facebook')
 
+    const petRepository = new PostgresPetRepository(sql)
+    const images = new CloudinaryImageStorage(config.cloudinary, clock)
     const pets = createPetsModule({
-        pets: new PostgresPetRepository(sql),
-        images: new CloudinaryImageStorage(config.cloudinary, clock),
+        pets: petRepository,
+        images,
         describer: openai ? new OpenAIPetDescriber(openai, config.openai.describerModel) : new DisabledPetDescriber(),
         moderator: openai
             ? new OpenAIDecisionsModerator(openai, config.openai.moderationModel)
@@ -76,10 +91,21 @@ function buildContainer(): Container {
         reportError
     })
 
-    // Modules subscribe their handlers here (image indexing now; notifications later).
+    // Modules subscribe their handlers here (search indexing and social posts now; notifications later).
     const eventHandlers = new EventHandlerRegistry()
     if (config.gemini.apiKey) {
         for (const [type, handler] of Object.entries(petsEventHandlers(pets))) eventHandlers.on(type, handler)
+    }
+    if (facebookPage) {
+        const social = createSocialPublishing({
+            pets: petRepository,
+            images,
+            publisher: new FacebookPageSocialPublisher(facebookPage),
+            posts: new PostgresSocialPostRepository(sql),
+            petUrl: id => new URL(`/mascota/${id}`, config.baseUrl).toString(),
+            clock
+        })
+        for (const [type, handler] of Object.entries(socialEventHandlers(social))) eventHandlers.on(type, handler)
     }
 
     return {
