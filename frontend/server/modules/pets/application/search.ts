@@ -55,6 +55,51 @@ export class IndexPetForSearch {
     }
 }
 
+/**
+ * Indexes the published pets that are missing from the search index: their publication event failed
+ * for good, or they were published before search existed. Without this they never show up in search.
+ */
+export class BackfillSearchIndex {
+    constructor(
+        private readonly pets: PetRepository,
+        private readonly embedder: Embedder,
+        private readonly index: PetEmbeddingIndex,
+        private readonly indexForSearch: IndexPetForSearch,
+        private readonly reportError: (error: unknown, context: string) => void
+    ) {}
+
+    /** At most `maxPets` per run keeps it within the request time; the rest wait for the next run. */
+    async execute({ maxPets = 10 } = {}): Promise<{ indexed: number; failed: number; remaining: number }> {
+        const result = { indexed: 0, failed: 0, remaining: 0 }
+        if (!this.embedder.available) return result
+
+        let cursor: string | undefined
+        do {
+            const page = await this.pets.search({ moderationStatus: 'approved', limit: 100, cursor })
+            const indexed = await this.index.findIndexed(
+                page.items.map(pet => pet.id),
+                this.embedder.model
+            )
+            for (const pet of page.items.filter(pet => !indexed.has(pet.id))) {
+                if (result.indexed + result.failed >= maxPets) {
+                    result.remaining++
+                    continue
+                }
+                try {
+                    await this.indexForSearch.execute(pet.id)
+                    result.indexed++
+                } catch (error) {
+                    result.failed++
+                    this.reportError(error, `search-backfill:${pet.id}`)
+                }
+            }
+            cursor = page.nextCursor ?? undefined
+        } while (cursor)
+
+        return result
+    }
+}
+
 export interface PetMatch {
     pet: Pet
     /** 0–100, already calibrated. */

@@ -44,6 +44,7 @@ serve them as routes.
 | GET | `/api/v1/admin/pets` | Admin. Reports by `moderationStatus` (`pending_review` by default) |
 | PATCH | `/api/v1/admin/pets/:id/moderation` | Admin. `{ "status": "approved" }` publishes; `"rejected"` deletes the report and its images |
 | * | `/api/internal/outbox/process` | Internal token. Delivers pending domain events |
+| * | `/api/internal/search/backfill` | Internal token. Indexes published pets missing from search |
 | * | `/api/internal/images/cleanup` | Internal token. Deletes uploads older than a day that no pet uses |
 
 Errors always look like `{ "error": { "code", "message", "details" } }`; `429` responses include `Retry-After`.
@@ -66,6 +67,8 @@ Admin actions use `Authorization: Bearer $NUXT_ADMIN_TOKEN` until Google login e
     stay first. Without Gemini, or over its rate limit, `q` is a plain keyword search.
   - Similarities become percentages with `NUXT_IMAGE_SEARCH_*` and `NUXT_SEMANTIC_SEARCH_*` floors/ceilings.
     The photo calibration comes from `npm run eval:embeddings -- <dataset-dir>`; the text ones are provisional.
+  - Every night, published pets missing from the index (a publication event that failed for good, or pets
+    published before search existed) are indexed, at most 10 per run.
   - After changing the model, run `npm run reindex:search`.
 - **Outbox**: domain events (`pet.published`, `pet.reunited`) are stored with the change and delivered right
   after the response. A GitHub Actions workflow (`scheduled-jobs.yml`) retries every 15 minutes and cleans up

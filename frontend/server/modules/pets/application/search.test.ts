@@ -152,6 +152,73 @@ describe('search', () => {
         })
     })
 
+    describe('BackfillSearchIndex', () => {
+        it('indexes published pets missing from the index, so photo search finds them', async () => {
+            const missing = await reportPet({ photos: [0] })
+            const indexed = await reportPet({ photos: [60] })
+            index.entries.delete(missing.id)
+            const callsBefore = embedder.calls.length
+
+            expect(await searchByPhoto(0)).toEqual([])
+            expect(await pets.backfillSearchIndex.execute()).toEqual({ indexed: 1, failed: 0, remaining: 0 })
+
+            expect(embedder.calls.length).toBe(callsBefore + 2) // the search query and the missing pet only
+            expect(index.entries.has(indexed.id)).toBe(true)
+            expect((await searchByPhoto(0)).map(r => [r.pet.id, r.match])).toEqual([[missing.id, 100]])
+        })
+
+        it('reindexes pets indexed only with another model', async () => {
+            const pet = await reportPet({ photos: [0] })
+            index.entries.set(pet.id, { ...index.entries.get(pet.id)!, model: 'old-model' })
+
+            expect(await pets.backfillSearchIndex.execute()).toMatchObject({ indexed: 1 })
+            expect(index.entries.get(pet.id)!.model).toBe('fake-embedder')
+        })
+
+        it('skips pets that are not public', async () => {
+            moderation = REVIEW
+            const pending = await reportPet({ photos: [0] })
+
+            expect(await pets.backfillSearchIndex.execute()).toEqual({ indexed: 0, failed: 0, remaining: 0 })
+            expect(index.entries.has(pending.id)).toBe(false)
+        })
+
+        it('caps the pets indexed per run and counts the rest', async () => {
+            for (let i = 0; i < 3; i++) await reportPet({ photos: [0] })
+            index.entries.clear()
+
+            expect(await pets.backfillSearchIndex.execute({ maxPets: 2 })).toEqual({
+                indexed: 2,
+                failed: 0,
+                remaining: 1
+            })
+            expect(await pets.backfillSearchIndex.execute({ maxPets: 2 })).toEqual({
+                indexed: 1,
+                failed: 0,
+                remaining: 0
+            })
+        })
+
+        it('reports a pet that cannot be indexed and goes on with the rest', async () => {
+            const broken = await reportPet({ photos: [0] })
+            const fine = await reportPet({ photos: [0] })
+            index.entries.clear()
+            embedder.vectors.delete(preview(broken.toSnapshot().images[0]!))
+
+            expect(await pets.backfillSearchIndex.execute()).toEqual({ indexed: 1, failed: 1, remaining: 0 })
+            expect(index.entries.has(fine.id)).toBe(true)
+            expect(reportError).toHaveBeenCalledWith(expect.any(Error), `search-backfill:${broken.id}`)
+        })
+
+        it('does nothing without an embedder', async () => {
+            await reportPet({ photos: [0] })
+            index.entries.clear()
+
+            pets = build({ embedder: new UnavailableEmbedder() })
+            expect(await pets.backfillSearchIndex.execute()).toEqual({ indexed: 0, failed: 0, remaining: 0 })
+        })
+    })
+
     describe('SearchPetsByImage', () => {
         it('returns similar pets best first with a calibrated match, hiding dissimilar ones', async () => {
             const same = await reportPet({ photos: [0] })

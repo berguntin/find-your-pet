@@ -1,5 +1,6 @@
 import type { Clock, IdGenerator } from '../../shared/application/ports'
 import {
+    BackfillSearchIndex,
     IndexPetForSearch,
     SearchPets,
     SearchPetsByImage,
@@ -60,6 +61,7 @@ export function createPetsModule({
     reportError = () => {}
 }: PetsModuleDependencies) {
     const searchByText = new SearchPetsByText(pets, embedder, embeddingIndex, semanticCalibration)
+    const indexForSearch = new IndexPetForSearch(pets, images, embedder, embeddingIndex)
     return {
         report: new ReportPet(pets, images, moderator, moderationThresholds, clock, ids, reportError),
         search: new SearchPets(pets, searchByText, reportError),
@@ -72,7 +74,8 @@ export function createPetsModule({
         describe: new DescribePetFromImage(describer),
         authorizeImageUpload: new AuthorizeImageUpload(images),
         cleanUpOrphanImages: new CleanUpOrphanImages(pets, images, clock),
-        indexForSearch: new IndexPetForSearch(pets, images, embedder, embeddingIndex),
+        indexForSearch,
+        backfillSearchIndex: new BackfillSearchIndex(pets, embedder, embeddingIndex, indexForSearch, reportError),
         searchByImage: new SearchPetsByImage(pets, embedder, embeddingIndex, matchCalibration)
     }
 }
