@@ -20,8 +20,18 @@ frontend/
     api/v1/            HTTP handlers (thin: validate, call a use case, present)
     db/migrations/     SQL migrations (dbmate)
   contracts/           API schemas (zod) and DTOs shared by server and browser
-  composables/usePetsApi.ts  typed API client used by pages
+  features/            UI by feature, each with components/, composables/, utils/, types/
+    pets/              cards, list, filters, gallery, contact; usePetsApi (typed API client)
+    report/            report form pieces: photo picker, similar pets, confirmation
+    search/            search bar and search by photo
+    sharing/           share button and Open Graph metadata
+  pages/ · layouts/    routes; pages compose features and hold no API URLs
+  components/          generic, feature-agnostic UI (header, footer, empty state...)
+  utils/               generic helpers (images, dates)
 ```
+
+Everything under `features/*/` is auto-imported (components without a folder prefix), so a new
+feature folder needs no extra configuration.
 
 `domain/` and `application/` cannot import Nuxt, h3 or infrastructure; ESLint enforces it.
 
