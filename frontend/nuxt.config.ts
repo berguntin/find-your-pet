@@ -12,7 +12,7 @@ export default defineNuxtConfig({
     devServer: {
         port: 8000
     },
-    modules: ['@nuxtjs/tailwindcss', '@nuxt/icon', 'nuxt-swiper', '@nuxt/content', '@nuxtjs/i18n'],
+    modules: ['@nuxtjs/tailwindcss', '@nuxt/icon', 'nuxt-swiper', '@nuxt/content', '@nuxtjs/i18n', 'nuxt-auth-utils'],
     app: {
         head: {
             title: 'Mascotas Encontradas',
@@ -59,7 +59,17 @@ export default defineNuxtConfig({
         // Server-only. Each key is overridden by its NUXT_* variable (see .env.example).
         databaseUrl: '',
         adminToken: '',
+        adminEmails: '',
         internalToken: '',
+        // Admin panel session (nuxt-auth-utils): sealed cookie with NUXT_SESSION_PASSWORD, valid for a week.
+        session: {
+            password: '',
+            maxAge: 60 * 60 * 24 * 7
+        },
+        // Filled by NUXT_OAUTH_GOOGLE_CLIENT_ID / NUXT_OAUTH_GOOGLE_CLIENT_SECRET.
+        oauth: {
+            google: { clientId: '', clientSecret: '' }
+        },
         cloudinary: {
             cloudName: '',
             apiKey: '',

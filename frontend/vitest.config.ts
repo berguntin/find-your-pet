@@ -16,7 +16,7 @@ export default defineConfig({
                 'scripts/lib/**/*.ts'
             ],
             // Wiring, Nuxt-only code and browser canvas helpers are covered by the build and manual checks.
-            exclude: ['**/*.test.ts', 'server/container.ts', 'server/test/**', 'utils/images.ts'],
+            exclude: ['**/*.test.ts', 'server/container.ts', 'server/routes/auth/**', 'server/test/**', 'utils/images.ts'],
             reporter: ['text-summary', 'text'],
             // Enforced only with a database (as in CI): otherwise the Postgres adapter tests are skipped.
             thresholds: process.env.TEST_DATABASE_URL

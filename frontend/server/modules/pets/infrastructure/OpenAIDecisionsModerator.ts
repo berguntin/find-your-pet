@@ -30,7 +30,7 @@ const SPECIES_LABEL = { dog: 'dog', cat: 'cat', other: 'other animal' } as const
 
 /** Asks the OpenAI Decisions API how likely a report is to be a genuine, acceptable lost/found pet notice. */
 export class OpenAIDecisionsModerator implements ContentModerator {
-    constructor(private readonly client: DecisionsClient, private readonly model: string) {}
+    constructor(private readonly client: DecisionsClient, readonly model: string) {}
 
     async review(submission: ModerationSubmission): Promise<ModerationScores> {
         const decision = await this.client.decisions.create(
@@ -72,6 +72,8 @@ export class OpenAIDecisionsModerator implements ContentModerator {
  * otherwise it fails, which sends every report to manual review instead of publishing it unchecked.
  */
 export class DisabledContentModerator implements ContentModerator {
+    readonly model = null
+
     constructor(private readonly approveEverything: boolean) {}
 
     async review(): Promise<ModerationScores> {

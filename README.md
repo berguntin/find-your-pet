@@ -51,15 +51,31 @@ serve them as routes.
 | POST | `/api/v1/pets/describe` | Pre-fills the form from a photo (OpenAI). Rate limited |
 | POST | `/api/v1/pets/search-by-image` | `{ image: dataUrl }` → published, open pets that look alike, with a calibrated `match` (0–100). The photo is not stored. `503` without Gemini. Rate limited |
 | POST | `/api/v1/uploads/signature` | Signed parameters to upload an image straight to Cloudinary. Rate limited |
-| GET | `/api/v1/admin/pets` | Admin. Reports by `moderationStatus` (`pending_review` by default) |
-| PATCH | `/api/v1/admin/pets/:id/moderation` | Admin. `{ "status": "approved" }` publishes; `"rejected"` deletes the report and its images |
+| GET | `/api/v1/admin/pets` | Admin. Reports by `moderationStatus` (`pending_review` by default, `all` for every pet), with moderation scores |
+| GET | `/api/v1/admin/pets/:id` | Admin. Any pet with its moderation scores |
+| PATCH | `/api/v1/admin/pets/:id` | Admin. Any reported detail, the photos (removed ones are deleted) and `resolution` (`open`/`reunited`) |
+| PATCH | `/api/v1/admin/pets/:id/moderation` | Admin. `{ "status": "approved" }` publishes; `"pending_review"` hides a published pet; `"rejected"` deletes the report and its images |
+| GET | `/api/v1/admin/stats?days=30` | Admin. New lost/found pets and reunions per day (Europe/Madrid days) vs the previous period, and totals. `days`: 7, 30 or 90 |
+| GET | `/api/v1/admin/moderation?days=30` | Admin. Moderator setup and thresholds, automatic and admin decisions per day, latency, latest decisions |
 | * | `/api/internal/outbox/process` | Internal token. Delivers pending domain events |
 | * | `/api/internal/search/backfill` | Internal token. Indexes published pets missing from search |
 | * | `/api/internal/images/cleanup` | Internal token. Deletes uploads older than a day that no pet uses |
 
 Errors always look like `{ "error": { "code", "message", "details" } }`; `429` responses include `Retry-After`.
-Admin actions use `Authorization: Bearer $NUXT_ADMIN_TOKEN` until Google login exists; internal endpoints use
-`$NUXT_INTERNAL_TOKEN` (or Vercel's `CRON_SECRET`).
+Admin actions accept the admin panel session or `Authorization: Bearer $NUXT_ADMIN_TOKEN` (scripts); internal
+endpoints use `$NUXT_INTERNAL_TOKEN` (or Vercel's `CRON_SECRET`).
+
+## Admin panel
+
+`/admin` (Spanish only): overview with new lost/found pets per day and trends, every pet with full editing
+(details, photos, resolution, publish/hide/reject, delete) and the automatic moderator's setup and decisions.
+
+- Sign-in with Google through `nuxt-auth-utils` (sealed session cookie). Only verified emails listed in
+  `NUXT_ADMIN_EMAILS` get in, and the list is checked again on every admin request.
+- Needs `NUXT_OAUTH_GOOGLE_CLIENT_ID`, `NUXT_OAUTH_GOOGLE_CLIENT_SECRET` (a *Web application* OAuth client with
+  `<base url>/auth/google` as redirect URI) and `NUXT_SESSION_PASSWORD` (32+ characters).
+- Every moderation decision (automatic or by an admin) is stored in `moderation_decisions`, including rejected
+  reports' text (without contact details or photos) so false rejections can be audited.
 
 ## Moderation, rate limiting and background work
 

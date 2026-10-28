@@ -15,6 +15,7 @@ describe('parseServerConfig', () => {
         const config = parseServerConfig(runtimeConfig())
 
         expect(config.adminToken).toBeUndefined()
+        expect(config.adminEmails).toEqual([])
         expect(config.internalToken).toBeUndefined()
         expect(config.openai.apiKey).toBeUndefined()
         expect(config.upstash).toEqual({ url: undefined, token: undefined })
@@ -50,6 +51,7 @@ describe('parseServerConfig', () => {
         const config = parseServerConfig(
             runtimeConfig({
                 adminToken: 'token',
+                adminEmails: 'Ana@example.com,luis@example.com',
                 internalToken: 'internal',
                 openai: { apiKey: 'sk-test' },
                 upstash: { url: 'https://redis.test', token: 'redis-token' }
@@ -57,6 +59,7 @@ describe('parseServerConfig', () => {
         )
 
         expect(config.adminToken).toBe('token')
+        expect(config.adminEmails).toEqual(['ana@example.com', 'luis@example.com'])
         expect(config.internalToken).toBe('internal')
         expect(config.openai).toEqual({
             apiKey: 'sk-test',

@@ -1,7 +1,8 @@
 import type { Page } from '../../../shared/application/ports'
 import { InMemoryOutboxStore } from '../../../shared/infrastructure/InMemoryOutboxStore'
-import { Pet } from '../domain/Pet'
-import type { PetRepository, PetSearchCriteria } from '../application/ports'
+import { Pet, type PetProps } from '../domain/Pet'
+import type { DailyPetActivity, PetRepository, PetSearchCriteria, PetStateCount } from '../application/ports'
+import { calendarDay } from '../application/stats'
 
 /** Test double that keeps pets in memory. Newest pets come first, like the Postgres adapter. */
 export class InMemoryPetRepository implements PetRepository {
@@ -16,6 +17,34 @@ export class InMemoryPetRepository implements PetRepository {
 
     async listAllImageUrls(): Promise<string[]> {
         return [...this.pets.values()].flatMap(pet => pet.toSnapshot().images)
+    }
+
+    async countDailyActivity(since: Date, timeZone: string): Promise<DailyPetActivity[]> {
+        const counts = new Map<string, DailyPetActivity>()
+        const add = (date: Date, kind: DailyPetActivity['kind'], pet: Pick<PetProps, 'reportType' | 'species'>) => {
+            const day = calendarDay(date, timeZone)
+            const key = [day, kind, pet.reportType, pet.species].join('|')
+            const row = counts.get(key) ?? { day, kind, reportType: pet.reportType, species: pet.species, count: 0 }
+            row.count++
+            counts.set(key, row)
+        }
+        for (const pet of [...this.pets.values()].map(p => p.toSnapshot())) {
+            if (pet.createdAt >= since) add(pet.createdAt, 'reported', pet)
+            if (pet.resolution === 'reunited' && pet.resolvedAt && pet.resolvedAt >= since)
+                add(pet.resolvedAt, 'reunited', pet)
+        }
+        return [...counts.values()]
+    }
+
+    async countByState(): Promise<PetStateCount[]> {
+        const counts = new Map<string, PetStateCount>()
+        for (const { reportType, resolution, moderationStatus } of [...this.pets.values()].map(p => p.toSnapshot())) {
+            const key = [reportType, resolution, moderationStatus].join('|')
+            const row = counts.get(key) ?? { reportType, resolution, moderationStatus, count: 0 }
+            row.count++
+            counts.set(key, row)
+        }
+        return [...counts.values()]
     }
 
     async findById(id: string): Promise<Pet | null> {
