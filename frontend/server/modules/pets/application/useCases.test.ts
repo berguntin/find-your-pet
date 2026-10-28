@@ -5,6 +5,7 @@ import type { ModerationScores } from '../domain/moderation'
 import type { ReportPetData } from '../domain/Pet'
 import { createPetsModule, type PetsModule } from '../index'
 import { FakeEmbedder } from '../infrastructure/FakeEmbedder'
+import { InMemoryModerationLog } from '../infrastructure/InMemoryModerationLog'
 import { InMemoryImageStorage } from '../infrastructure/InMemoryImageStorage'
 import { InMemoryPetEmbeddingIndex } from '../infrastructure/InMemoryPetEmbeddingIndex'
 import { InMemoryPetRepository } from '../infrastructure/InMemoryPetRepository'
@@ -20,7 +21,8 @@ const REJECT: ModerationScores = { isPetReport: 0.05, showsAnimal: 0.1, inapprop
 describe('pet use cases', () => {
     let repository: InMemoryPetRepository
     let images: InMemoryImageStorage
-    let moderator: { review: ReturnType<typeof vi.fn<ContentModerator['review']>> }
+    let moderator: { model: string | null; review: ReturnType<typeof vi.fn<ContentModerator['review']>> }
+    let moderationLog: InMemoryModerationLog
     let reportError: ReturnType<typeof vi.fn>
     let pets: PetsModule
     let now: Date
@@ -46,7 +48,8 @@ describe('pet use cases', () => {
     beforeEach(() => {
         repository = new InMemoryPetRepository()
         images = new InMemoryImageStorage()
-        moderator = { review: vi.fn<ContentModerator['review']>().mockResolvedValue(APPROVE) }
+        moderator = { model: 'test-moderator', review: vi.fn<ContentModerator['review']>().mockResolvedValue(APPROVE) }
+        moderationLog = new InMemoryModerationLog()
         reportError = vi.fn()
         let seconds = 0
         let counter = 0
@@ -56,6 +59,7 @@ describe('pet use cases', () => {
             images,
             describer: { describe: vi.fn().mockResolvedValue(null) },
             moderator,
+            moderationLog,
             embedder: new FakeEmbedder(),
             embeddingIndex: new InMemoryPetEmbeddingIndex(),
             clock: { now: () => new Date(now.getTime() + 1000 * seconds++) },
@@ -142,6 +146,140 @@ describe('pet use cases', () => {
         })
     })
 
+    describe('moderation log', () => {
+        it('logs each automatic decision with its scores, model, latency and what was reviewed', async () => {
+            const approved = await reportApproved({ name: 'Nieve' })
+            const pending = await reportPending()
+
+            expect(moderationLog.records).toEqual([
+                expect.objectContaining({
+                    petId: approved.id,
+                    source: 'automatic',
+                    decision: 'approved',
+                    scores: APPROVE,
+                    model: 'test-moderator',
+                    error: null,
+                    latencyMs: 1000,
+                    submission: {
+                        reportType: 'lost',
+                        species: 'cat',
+                        name: 'Nieve',
+                        description: 'Gata blanca',
+                        location: 'Valencia'
+                    }
+                }),
+                expect.objectContaining({ petId: pending.id, decision: 'pending_review', scores: REVIEW })
+            ])
+        })
+
+        it('logs rejections, which leave no pet behind', async () => {
+            moderator.review.mockResolvedValueOnce(REJECT)
+
+            await expect(reportApproved()).rejects.toThrow(ContentRejectedError)
+            expect(moderationLog.records).toEqual([
+                expect.objectContaining({ petId: null, decision: 'rejected', scores: REJECT })
+            ])
+        })
+
+        it('logs why the moderator failed', async () => {
+            moderator.review.mockRejectedValueOnce(new Error('x'.repeat(600)))
+            await reportApproved()
+            moderator.review.mockRejectedValueOnce('timeout')
+            await reportApproved()
+
+            expect(moderationLog.records.map(r => [r.decision, r.scores, r.error?.length])).toEqual([
+                ['pending_review', null, 500],
+                ['pending_review', null, 7]
+            ])
+        })
+
+        it('never fails a report because the log is down', async () => {
+            vi.spyOn(moderationLog, 'record').mockRejectedValue(new Error('db down'))
+
+            expect((await reportApproved()).isPublic).toBe(true)
+            expect(reportError).toHaveBeenCalledWith(expect.any(Error), 'moderation-log')
+        })
+
+        it('logs admin decisions', async () => {
+            const pet = await reportPending()
+            await pets.moderate.execute(pet.id, 'approved', admin)
+            await pets.moderate.execute(pet.id, 'pending_review', admin)
+            await pets.moderate.execute(pet.id, 'rejected', admin)
+
+            expect(moderationLog.records.slice(1).map(r => [r.source, r.decision, r.petId])).toEqual([
+                ['admin', 'approved', pet.id],
+                ['admin', 'pending_review', pet.id],
+                ['admin', 'rejected', pet.id]
+            ])
+        })
+
+        it('does not fail an admin decision because the log is down', async () => {
+            const pet = await reportPending()
+            vi.spyOn(moderationLog, 'record').mockRejectedValue(new Error('db down'))
+
+            expect((await pets.moderate.execute(pet.id, 'approved', admin))?.isPublic).toBe(true)
+        })
+    })
+
+    describe('UpdatePet', () => {
+        it('corrects details, replaces photos and deletes the ones removed', async () => {
+            const [first, second] = [images.upload('first.jpg'), images.upload('second.jpg')]
+            const pet = await reportApproved({ images: [first, second] })
+            const added = images.upload('added.jpg')
+
+            const updated = await pets.update.execute(
+                pet.id,
+                { description: 'Gata blanca con collar', images: [second, added] },
+                admin
+            )
+
+            expect(updated.toSnapshot()).toMatchObject({
+                description: 'Gata blanca con collar',
+                images: [second, added]
+            })
+            expect((await repository.findById(pet.id))?.toSnapshot().images).toEqual([second, added])
+            expect(images.deleted).toEqual([first])
+            expect(repository.outbox.pending().map(e => e.type)).toEqual(['pet.published', 'pet.edited'])
+        })
+
+        it('rejects new photos that were not uploaded through the app', async () => {
+            const pet = await reportApproved()
+
+            await expect(pets.update.execute(pet.id, { images: ['https://evil.test/x.jpg'] }, admin)).rejects.toThrow(
+                ValidationError
+            )
+        })
+
+        it('marks a pet as reunited and reopens it', async () => {
+            const pet = await reportApproved()
+
+            const reunited = await pets.update.execute(pet.id, { resolution: 'reunited' }, admin)
+            expect(reunited.toSnapshot()).toMatchObject({ resolution: 'reunited', resolvedBy: 'admin' })
+            expect((await pets.update.execute(pet.id, { resolution: 'reunited' }, admin)).isReunited).toBe(true)
+            expect((await pets.update.execute(pet.id, { resolution: 'open' }, admin)).isReunited).toBe(false)
+            expect((await pets.update.execute(pet.id, { resolution: 'open' }, admin)).isReunited).toBe(false)
+        })
+
+        it('reports, but survives, failing to delete removed photos', async () => {
+            const [first, second] = [images.upload('first.jpg'), images.upload('second.jpg')]
+            const pet = await reportApproved({ images: [first, second] })
+            images.failOnDelete = true
+
+            await pets.update.execute(pet.id, { images: [second] }, admin)
+
+            expect(reportError).toHaveBeenCalledWith(expect.any(Error), 'delete-images')
+        })
+
+        it('requires managing the pet', async () => {
+            const pet = await reportApproved()
+
+            await expect(pets.update.execute(pet.id, { location: 'Xirivella' }, anonymous)).rejects.toThrow(
+                ForbiddenError
+            )
+            await expect(pets.update.execute('missing', {}, admin)).rejects.toThrow(NotFoundError)
+        })
+    })
+
     describe('visibility', () => {
         it('lists only approved pets, newest first, with pagination', async () => {
             await reportApproved({ description: 'primero' })
@@ -184,8 +322,11 @@ describe('pet use cases', () => {
             const page = await pets.listForModeration.execute({ limit: 10 }, admin)
             const approved = await pets.listForModeration.execute({ limit: 10, moderationStatus: 'approved' }, admin)
 
+            const all = await pets.listForModeration.execute({ limit: 10, moderationStatus: 'all' }, admin)
+
             expect(page.items.map(p => p.id)).toEqual([pending.id])
             expect(approved.items).toHaveLength(1)
+            expect(all.items).toHaveLength(2)
         })
     })
 

@@ -1,3 +1,10 @@
+import { readdirSync } from 'node:fs'
+
+/** UI is grouped by feature in features/<name>/{components,composables,utils,types}. */
+const FEATURES = readdirSync(new URL('./features', import.meta.url), { withFileTypes: true })
+    .filter(entry => entry.isDirectory())
+    .map(entry => entry.name)
+
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
     compatibilityDate: '2024-04-03',
@@ -5,7 +12,7 @@ export default defineNuxtConfig({
     devServer: {
         port: 8000
     },
-    modules: ['@nuxtjs/tailwindcss', '@nuxt/icon', 'nuxt-swiper', '@nuxt/content', '@nuxtjs/i18n'],
+    modules: ['@nuxtjs/tailwindcss', '@nuxt/icon', 'nuxt-swiper', '@nuxt/content', '@nuxtjs/i18n', 'nuxt-auth-utils'],
     app: {
         head: {
             title: 'Mascotas Encontradas',
@@ -39,14 +46,30 @@ export default defineNuxtConfig({
     tailwindcss: {
         cssPath: '~/assets/css/app.css'
     },
+    components: [
+        // Generic, feature-agnostic components.
+        '~/components',
+        // Feature components keep their own names (PetCard, ShareButton...) without a folder prefix.
+        ...FEATURES.map(feature => ({ path: `~/features/${feature}/components`, pathPrefix: false }))
+    ],
     imports: {
-        dirs: ['types']
+        dirs: ['features/*/composables', 'features/*/utils', 'features/*/types']
     },
     runtimeConfig: {
         // Server-only. Each key is overridden by its NUXT_* variable (see .env.example).
         databaseUrl: '',
         adminToken: '',
+        adminEmails: '',
         internalToken: '',
+        // Admin panel session (nuxt-auth-utils): sealed cookie with NUXT_SESSION_PASSWORD, valid for a week.
+        session: {
+            password: '',
+            maxAge: 60 * 60 * 24 * 7
+        },
+        // Filled by NUXT_OAUTH_GOOGLE_CLIENT_ID / NUXT_OAUTH_GOOGLE_CLIENT_SECRET.
+        oauth: {
+            google: { clientId: '', clientSecret: '' }
+        },
         cloudinary: {
             cloudName: '',
             apiKey: '',

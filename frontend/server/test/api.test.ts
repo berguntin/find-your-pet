@@ -6,6 +6,7 @@
 import { randomUUID } from 'node:crypto'
 import { createApp, createRouter, toWebHandler } from 'h3'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { AdminPetDto, AdminPetPageDto, ModerationOverviewDto, PetStatsDto } from '../../contracts/admin'
 import type { ApiErrorDto, PetDto, PetMatchListDto, PetPageDto, ReportPetRequest } from '../../contracts/pets'
 import type { Container } from '../container'
 import { createPetsModule } from '../modules/pets'
@@ -13,6 +14,7 @@ import { petSearchText } from '../modules/pets/application/search'
 import type { ContentModerator, PetDescriber } from '../modules/pets/application/ports'
 import { FakeEmbedder } from '../modules/pets/infrastructure/FakeEmbedder'
 import { UnavailableEmbedder } from '../modules/pets/infrastructure/GeminiEmbedder'
+import { InMemoryModerationLog } from '../modules/pets/infrastructure/InMemoryModerationLog'
 import { InMemoryImageStorage } from '../modules/pets/infrastructure/InMemoryImageStorage'
 import { InMemoryPetEmbeddingIndex } from '../modules/pets/infrastructure/InMemoryPetEmbeddingIndex'
 import { InMemoryPetRepository } from '../modules/pets/infrastructure/InMemoryPetRepository'
@@ -34,6 +36,10 @@ const { default: describePet } = await import('../api/v1/pets/describe.post')
 const { default: searchByImage } = await import('../api/v1/pets/search-by-image.post')
 const { default: signUpload } = await import('../api/v1/uploads/signature.post')
 const { default: adminListPets } = await import('../api/v1/admin/pets/index.get')
+const { default: adminGetPet } = await import('../api/v1/admin/pets/[id].get')
+const { default: adminUpdatePet } = await import('../api/v1/admin/pets/[id].patch')
+const { default: adminStats } = await import('../api/v1/admin/stats.get')
+const { default: adminModeration } = await import('../api/v1/admin/moderation.get')
 const { default: moderatePet } = await import('../api/v1/admin/pets/[id]/moderation.patch')
 const { default: processOutbox } = await import('../api/internal/outbox/process')
 const { default: cleanUpImages } = await import('../api/internal/images/cleanup')
@@ -49,6 +55,10 @@ const router = createRouter()
     .delete('/api/v1/pets/:id', deletePet)
     .post('/api/v1/uploads/signature', signUpload)
     .get('/api/v1/admin/pets', adminListPets)
+    .get('/api/v1/admin/pets/:id', adminGetPet)
+    .patch('/api/v1/admin/pets/:id', adminUpdatePet)
+    .get('/api/v1/admin/stats', adminStats)
+    .get('/api/v1/admin/moderation', adminModeration)
     .patch('/api/v1/admin/pets/:id/moderation', moderatePet)
     .use('/api/internal/outbox/process', processOutbox)
     .use('/api/internal/images/cleanup', cleanUpImages)
@@ -56,6 +66,7 @@ const router = createRouter()
 const handler = toWebHandler(createApp().use(router))
 
 const ADMIN_TOKEN = 'admin-token'
+const ADMIN_EMAIL = 'admin@example.com'
 const INTERNAL_TOKEN = 'internal-token'
 const IMAGE = 'https://storage.test/pets/1.jpg'
 
@@ -100,7 +111,9 @@ async function createPet(overrides: Partial<ReportPetRequest> = {}): Promise<Pet
 }
 
 let describer: { describe: ReturnType<typeof vi.fn<PetDescriber['describe']>> }
-let moderator: { review: ReturnType<typeof vi.fn<ContentModerator['review']>> }
+let moderator: { model: string | null; review: ReturnType<typeof vi.fn<ContentModerator['review']>> }
+let moderationLog: InMemoryModerationLog
+let sessionEmail: string | null
 let rateLimiter: { consume: ReturnType<typeof vi.fn<RateLimiter['consume']>> }
 let repository: InMemoryPetRepository
 let images: InMemoryImageStorage
@@ -112,7 +125,9 @@ beforeEach(() => {
     let seconds = 0
     const clock = { now: () => new Date(Date.UTC(2026, 9, 19, 10, 0, seconds++)) }
     describer = { describe: vi.fn<PetDescriber['describe']>().mockResolvedValue(null) }
-    moderator = { review: vi.fn<ContentModerator['review']>().mockResolvedValue(APPROVE) }
+    moderator = { model: 'test-moderator', review: vi.fn<ContentModerator['review']>().mockResolvedValue(APPROVE) }
+    moderationLog = new InMemoryModerationLog()
+    sessionEmail = null
     rateLimiter = {
         consume: vi.fn<RateLimiter['consume']>().mockResolvedValue({ allowed: true, retryAfterSeconds: 0 })
     }
@@ -129,6 +144,7 @@ beforeEach(() => {
             images,
             describer,
             moderator,
+            moderationLog,
             embedder: overrides.embedder ?? embedder,
             embeddingIndex,
             matchCalibration: { floor: 0.9, ceiling: 1 },
@@ -136,7 +152,8 @@ beforeEach(() => {
             ids: { next: () => randomUUID() }
         })
     container = {
-        config: { adminToken: ADMIN_TOKEN, internalToken: INTERNAL_TOKEN, cronSecret: undefined },
+        config: { internalToken: INTERNAL_TOKEN, cronSecret: undefined },
+        adminAccess: { adminToken: ADMIN_TOKEN, adminEmails: [ADMIN_EMAIL], sessionEmail: async () => sessionEmail },
         rateLimiter,
         processOutbox: new ProcessOutbox(repository.outbox, new EventHandlerRegistry(), clock),
         pets: buildPets()
@@ -337,7 +354,7 @@ describe('PATCH /api/v1/pets/:id', () => {
 
     it('rejects every token when no admin token is configured', async () => {
         const pet = await createPet()
-        container.config = { adminToken: undefined }
+        container.adminAccess = { ...container.adminAccess, adminToken: undefined }
 
         expect((await reunite(pet.id, 'undefined')).status).toBe(403)
     })
@@ -487,6 +504,115 @@ describe('admin moderation endpoints', () => {
     })
 })
 
+describe('admin panel session', () => {
+    it('treats a signed-in admin email like the admin token', async () => {
+        const pet = await createPet()
+        sessionEmail = 'Admin@Example.com'
+
+        expect((await call('GET', '/api/v1/admin/pets')).status).toBe(200)
+        expect((await call('DELETE', `/api/v1/pets/${pet.id}`)).status).toBe(204)
+    })
+
+    it('ignores sessions of emails not on the allowlist', async () => {
+        sessionEmail = 'someone@example.com'
+
+        expect((await call('GET', '/api/v1/admin/pets')).status).toBe(403)
+    })
+})
+
+describe('admin pet management endpoints', () => {
+    it('lists every pet with its moderation details', async () => {
+        await createPet()
+        moderator.review.mockResolvedValueOnce(REVIEW)
+        await createPet()
+
+        const { body } = await call<AdminPetPageDto>('GET', '/api/v1/admin/pets?moderationStatus=all', {
+            token: ADMIN_TOKEN
+        })
+
+        expect(body.items).toHaveLength(2)
+        expect(body.items[0]).toMatchObject({ moderationScores: REVIEW, moderatedAt: expect.any(String) })
+    })
+
+    it('gets any pet for admins only', async () => {
+        moderator.review.mockResolvedValueOnce(REVIEW)
+        const pet = await createPet()
+
+        expect((await call('GET', `/api/v1/admin/pets/${pet.id}`)).status).toBe(403)
+        const { status, body } = await call<AdminPetDto>('GET', `/api/v1/admin/pets/${pet.id}`, { token: ADMIN_TOKEN })
+        expect(status).toBe(200)
+        expect(body).toMatchObject({ id: pet.id, moderationStatus: 'pending_review', moderationScores: REVIEW })
+        expect((await call('GET', '/api/v1/admin/pets/nope', { token: ADMIN_TOKEN })).status).toBe(404)
+    })
+
+    it('edits any detail and the resolution', async () => {
+        const pet = await createPet()
+        const second = images.upload('second.jpg')
+        processOutboxInBackground.mockReset()
+
+        const { status, body } = await call<AdminPetDto>('PATCH', `/api/v1/admin/pets/${pet.id}`, {
+            body: { name: null, location: 'Sedaví', images: [second, IMAGE], resolution: 'reunited' },
+            token: ADMIN_TOKEN
+        })
+
+        expect(status).toBe(200)
+        expect(body).toMatchObject({ name: null, location: 'Sedaví', images: [second, IMAGE], resolution: 'reunited' })
+        expect(processOutboxInBackground).toHaveBeenCalledOnce()
+    })
+
+    it('validates edits and requires an admin', async () => {
+        const pet = await createPet()
+        const path = `/api/v1/admin/pets/${pet.id}`
+
+        expect((await call('PATCH', path, { body: { location: 'Sedaví' } })).status).toBe(403)
+        expect((await call('PATCH', path, { body: { ownerId: 'x' }, token: ADMIN_TOKEN })).status).toBe(422)
+        expect((await call('PATCH', path, { body: { images: [] }, token: ADMIN_TOKEN })).status).toBe(422)
+        expect((await call('PATCH', '/api/v1/admin/pets/nope', { body: {}, token: ADMIN_TOKEN })).status).toBe(404)
+    })
+
+    it('hides a published pet back to review', async () => {
+        const pet = await createPet()
+
+        const { body } = await call<AdminPetDto>('PATCH', `/api/v1/admin/pets/${pet.id}/moderation`, {
+            body: { status: 'pending_review' },
+            token: ADMIN_TOKEN
+        })
+
+        expect(body.moderationStatus).toBe('pending_review')
+        expect((await call('GET', `/api/v1/pets/${pet.id}`)).status).toBe(404)
+    })
+})
+
+describe('admin statistics endpoints', () => {
+    it('returns pet statistics for the requested period', async () => {
+        await createPet()
+
+        const { status, body } = await call<PetStatsDto>('GET', '/api/v1/admin/stats?days=7', { token: ADMIN_TOKEN })
+
+        expect(status).toBe(200)
+        expect(body.daily).toHaveLength(7)
+        expect(body.totals).toMatchObject({ all: 1, published: 1 })
+    })
+
+    it('returns the moderation overview', async () => {
+        await createPet()
+
+        const { status, body } = await call<ModerationOverviewDto>('GET', '/api/v1/admin/moderation', {
+            token: ADMIN_TOKEN
+        })
+
+        expect(status).toBe(200)
+        expect(body.days).toBe(30)
+        expect(body.moderator).toMatchObject({ enabled: true, model: 'test-moderator' })
+        expect(body.recent).toEqual([expect.objectContaining({ decision: 'approved', decidedAt: expect.any(String) })])
+    })
+
+    it.each(['/api/v1/admin/stats', '/api/v1/admin/moderation'])('%s is admin only and validates days', async path => {
+        expect((await call('GET', path)).status).toBe(403)
+        expect((await call('GET', `${path}?days=12`, { token: ADMIN_TOKEN })).status).toBe(422)
+    })
+})
+
 describe('internal endpoints', () => {
     it.each(['/api/internal/outbox/process', '/api/internal/images/cleanup', '/api/internal/search/backfill'])(
         'reject calls without the internal token: %s',
@@ -526,7 +652,7 @@ describe('internal endpoints', () => {
     })
 
     it('is disabled when no internal token is configured', async () => {
-        container.config = { adminToken: ADMIN_TOKEN, internalToken: undefined, cronSecret: undefined }
+        container.config = { internalToken: undefined, cronSecret: undefined }
 
         expect((await call('POST', '/api/internal/outbox/process', { token: 'undefined' })).status).toBe(401)
     })

@@ -133,9 +133,9 @@ Un script `scripts/eval-embeddings.ts`, que no se despliega, mide recall@1 y rec
 
 ### 3.5 Frontend
 
-- **[`AppSearch.vue`](../frontend/components/AppSearch.vue)**: botón de cámara o subir imagen. Usa `resizeImage` y `blobToDataUrl` de `utils/images.ts`, que ya existen.
+- **[`PetSearchBar.vue`](../frontend/features/search/components/PetSearchBar.vue)**: botón de cámara o subir imagen. Usa `resizeImage` y `blobToDataUrl` de `utils/images.ts`, que ya existen.
 - **[`pages/index.vue`](../frontend/pages/index.vue)**: modo "búsqueda por imagen" que sustituye el listado por los resultados ordenados por coincidencia, con un botón para volver.
-- **[`CardPet.vue`](../frontend/components/CardPet.vue)**: prop opcional `match` con un badge de porcentaje y color por nivel. Hay que cuidar el z-index con los badges actuales.
+- **[`PetCard.vue`](../frontend/features/pets/components/PetCard.vue)**: prop opcional `match` con un badge de porcentaje y color por nivel. Hay que cuidar el z-index con los badges actuales.
 - `usePetsApi.searchByImage()`, `PetMatchDto` en `contracts/` y textos nuevos en i18n.
 
 ### 3.6 Tests

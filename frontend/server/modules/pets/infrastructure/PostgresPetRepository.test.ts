@@ -122,4 +122,36 @@ describe.skipIf(!url)('PostgresPetRepository', () => {
         expect(literalPercent.items.map(p => p.id.at(-1))).toEqual(['1'])
         expect(approved.items).toEqual([])
     })
+
+    it('counts reports and reunions per day in the time zone, and pets by state', async () => {
+        const lost = report('00000000-0000-4000-8000-000000000001')
+        lost.applyAutomaticModeration('approved', null, new Date())
+        // 01:30 on the 20th in Madrid, still the 19th in UTC.
+        lost.markAsReunited({ kind: 'admin' }, new Date('2026-10-19T23:30:00Z'))
+        const found = report('00000000-0000-4000-8000-000000000002', { reportType: 'found', species: 'cat' })
+        await repository.save(lost)
+        await repository.save(found)
+        await repository.save(report('00000000-0000-4000-8000-000000000003'))
+
+        const activity = await repository.countDailyActivity(new Date('2026-10-01T00:00:00Z'), 'Europe/Madrid')
+        const states = await repository.countByState()
+
+        expect(activity).toEqual(
+            expect.arrayContaining([
+                { day: '2026-10-19', kind: 'reported', reportType: 'lost', species: 'dog', count: 2 },
+                { day: '2026-10-19', kind: 'reported', reportType: 'found', species: 'cat', count: 1 },
+                { day: '2026-10-20', kind: 'reunited', reportType: 'lost', species: 'dog', count: 1 }
+            ])
+        )
+        expect(activity).toHaveLength(3)
+        expect(await repository.countDailyActivity(new Date('2026-10-20T00:00:00Z'), 'UTC')).toEqual([])
+        expect(states).toEqual(
+            expect.arrayContaining([
+                { reportType: 'lost', resolution: 'reunited', moderationStatus: 'approved', count: 1 },
+                { reportType: 'lost', resolution: 'open', moderationStatus: 'pending_review', count: 1 },
+                { reportType: 'found', resolution: 'open', moderationStatus: 'pending_review', count: 1 }
+            ])
+        )
+        expect(states).toHaveLength(3)
+    })
 })

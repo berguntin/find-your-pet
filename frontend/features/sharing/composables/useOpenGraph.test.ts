@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { PetDto } from '../contracts/pets'
+import type { PetDto } from '../../../contracts/pets'
 import { useMetadata } from './useMetadata'
 import { useOpenGraph } from './useOpenGraph'
 
