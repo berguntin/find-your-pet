@@ -1,5 +1,5 @@
 import type { Page } from '../../../shared/application/ports'
-import type { ModerationScores } from '../domain/moderation'
+import type { ModerationDecision, ModerationRecord, ModerationScores, ModerationSource } from '../domain/moderation'
 import type { Pet } from '../domain/Pet'
 import type { ModerationStatus, ReportType, Resolution, Species } from '../domain/values'
 
@@ -24,6 +24,25 @@ export interface PetRepository {
     search(criteria: PetSearchCriteria): Promise<Page<Pet>>
     /** Every image URL used by any pet, to find orphan uploads. */
     listAllImageUrls(): Promise<string[]>
+    /** Pets reported and reunited since `since`, per calendar day in `timeZone` (YYYY-MM-DD). */
+    countDailyActivity(since: Date, timeZone: string): Promise<DailyPetActivity[]>
+    /** Every stored pet, counted by report type, resolution and moderation status. */
+    countByState(): Promise<PetStateCount[]>
+}
+
+export interface DailyPetActivity {
+    day: string
+    kind: 'reported' | 'reunited'
+    reportType: ReportType
+    species: Species
+    count: number
+}
+
+export interface PetStateCount {
+    reportType: ReportType
+    resolution: Resolution
+    moderationStatus: ModerationStatus
+    count: number
 }
 
 export interface UploadAuthorization {
@@ -72,8 +91,31 @@ export interface ModerationSubmission {
 }
 
 export interface ContentModerator {
+    /** Model behind the scores, for the moderation log; null when no model is configured. */
+    readonly model: string | null
     /** Throws when the moderator cannot be reached; the caller then sends the report to manual review. */
     review(submission: ModerationSubmission): Promise<ModerationScores>
+}
+
+/** Every moderation decision, so the admin can see how the automatic moderator behaves. */
+export interface ModerationLog {
+    record(record: ModerationRecord): Promise<void>
+    /** Decisions since `since`, counted per calendar day in `timeZone`, source, decision and failure. */
+    countByDay(since: Date, timeZone: string): Promise<ModerationDayCount[]>
+    /** Latest decisions, newest first. */
+    recent(limit: number): Promise<ModerationRecord[]>
+}
+
+export interface ModerationDayCount {
+    day: string
+    source: ModerationSource
+    decision: ModerationDecision
+    /** True when the moderator failed and the decision is the fallback (review). */
+    failed: boolean
+    count: number
+    /** Sum and count of the measured latencies, to average them across days. */
+    latencyMsTotal: number
+    latencyCount: number
 }
 
 export type EmbeddingInput =

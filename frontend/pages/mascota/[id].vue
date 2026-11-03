@@ -1,15 +1,12 @@
 <script setup lang="ts">
-    import ButtonShare from '@/components/social/ButtonShare.vue'
-
     const route = useRoute()
     const { t, locale } = useI18n()
 
-    const { data: pet, error } = await useFetch<Pet>(`/api/v1/pets/${route.params.id}`)
+    const id = String(route.params.id)
+    const api = usePetsApi()
+    const { data: pet, error } = await useAsyncData(`pet-${id}`, () => api.get(id))
 
     useHead(useOpenGraph(pet.value ?? null))
-
-    const activeImage = ref(0)
-    const revealSensitive = ref(false)
 
     const title = computed(() => (pet.value ? pet.value.name || t(`unnamed_${pet.value.species}`) : ''))
     const longDate = computed(() =>
@@ -20,7 +17,6 @@
             : ''
     )
     const relativeDate = computed(() => (pet.value ? formatRelativeDate(pet.value.eventDate, locale.value) : ''))
-    const hidden = computed(() => pet.value && !pet.value.alive && !revealSensitive.value)
     const isOpen = computed(() => pet.value?.resolution === 'open')
 </script>
 
@@ -35,41 +31,7 @@
         </EmptyState>
 
         <div v-else class="grid gap-8 lg:grid-cols-[1.25fr_1fr]">
-            <!-- Gallery -->
-            <section :aria-label="$t('photos')">
-                <div class="relative aspect-[4/3] overflow-hidden rounded-box bg-base-200">
-                    <img
-                        :src="pet.images[activeImage]"
-                        :alt="`${title} – ${activeImage + 1}/${pet.images.length}`"
-                        class="h-full w-full object-cover"
-                        :class="{ 'scale-110 blur-2xl': hidden }"
-                    />
-                    <div
-                        v-if="hidden"
-                        class="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-neutral/50 text-neutral-content"
-                    >
-                        <Icon name="mdi:eye-off-outline" size="2rem" />
-                        <p class="font-semibold">{{ $t('sensible_content') }}</p>
-                        <button class="btn btn-sm" @click="revealSensitive = true">{{ $t('show_image') }}</button>
-                    </div>
-                </div>
-                <div v-if="pet.images.length > 1" class="mt-3 flex gap-2 overflow-x-auto pb-1">
-                    <button
-                        v-for="(image, index) in pet.images"
-                        :key="image"
-                        type="button"
-                        class="h-20 w-24 shrink-0 overflow-hidden rounded-xl ring-2 transition"
-                        :class="
-                            index === activeImage ? 'ring-primary' : 'ring-transparent opacity-70 hover:opacity-100'
-                        "
-                        :aria-label="$t('show_photo', { n: index + 1 })"
-                        :aria-current="index === activeImage"
-                        @click="activeImage = index"
-                    >
-                        <img :src="image" alt="" class="h-full w-full object-cover" :class="{ 'blur-md': hidden }" />
-                    </button>
-                </div>
-            </section>
+            <PetGallery :images="pet.images" :title="title" :sensitive="!pet.alive" />
 
             <!-- Details -->
             <section class="flex flex-col gap-5">
@@ -121,7 +83,7 @@
                 </div>
 
                 <div class="flex items-center gap-3">
-                    <ButtonShare :pet="pet" :only-icon="false" class-name="btn-outline btn-primary" />
+                    <ShareButton :pet="pet" :only-icon="false" class-name="btn-outline btn-primary" />
                     <span class="text-sm text-muted">{{ $t('share_hint') }}</span>
                 </div>
             </section>

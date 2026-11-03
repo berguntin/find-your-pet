@@ -10,6 +10,7 @@ import type { RateLimiter } from './shared/application/rateLimit'
 import { parseServerConfig, withRawSecrets, type ServerConfig } from './shared/infrastructure/config'
 import { runInBackground } from './shared/infrastructure/background'
 import { createDatabase } from './shared/infrastructure/database'
+import type { AdminAccess } from './shared/infrastructure/http'
 import { PostgresOutboxStore } from './shared/infrastructure/PostgresOutboxStore'
 import { NoopRateLimiter, UpstashRateLimiter } from './shared/infrastructure/rateLimiters'
 import { GoogleGenAI } from '@google/genai'
@@ -25,11 +26,13 @@ import {
     DisabledPetDescriber,
     OpenAIPetDescriber
 } from './modules/pets/infrastructure/OpenAIPetDescriber'
+import { PostgresModerationLog } from './modules/pets/infrastructure/PostgresModerationLog'
 import { PostgresPetEmbeddingIndex } from './modules/pets/infrastructure/PostgresPetEmbeddingIndex'
 import { PostgresPetRepository } from './modules/pets/infrastructure/PostgresPetRepository'
 
 export interface Container {
-    config: Pick<ServerConfig, 'adminToken' | 'internalToken' | 'cronSecret'>
+    config: Pick<ServerConfig, 'internalToken' | 'cronSecret'>
+    adminAccess: AdminAccess
     rateLimiter: RateLimiter
     processOutbox: ProcessOutbox
     pets: PetsModule
@@ -62,6 +65,7 @@ function buildContainer(): Container {
         moderator: openai
             ? new OpenAIDecisionsModerator(openai, config.openai.moderationModel)
             : new DisabledContentModerator(isDevelopment),
+        moderationLog: new PostgresModerationLog(sql),
         embedder: config.gemini.apiKey
             ? new GeminiEmbedder(new GoogleGenAI({ apiKey: config.gemini.apiKey }), config.gemini.embeddingModel)
             : new UnavailableEmbedder(),
@@ -82,8 +86,17 @@ function buildContainer(): Container {
         for (const [type, handler] of Object.entries(petsEventHandlers(pets))) eventHandlers.on(type, handler)
     }
 
+    if (config.adminEmails.length === 0)
+        consola.warn('NUXT_ADMIN_EMAILS is not set: nobody can sign in to the admin panel')
+
     return {
         config,
+        adminAccess: {
+            adminToken: config.adminToken,
+            adminEmails: config.adminEmails,
+            // getUserSession is a Nitro auto-import from nuxt-auth-utils (not exposed through #imports).
+            sessionEmail: async event => (await getUserSession(event)).user?.email ?? null
+        },
         rateLimiter:
             config.upstash.url && config.upstash.token
                 ? new UpstashRateLimiter({ url: config.upstash.url, token: config.upstash.token })

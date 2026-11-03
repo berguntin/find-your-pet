@@ -1,21 +1,10 @@
 <script setup lang="ts">
-    import { FetchError } from 'ofetch'
-    import {
-        PET_LIMITS,
-        type ApiErrorDto,
-        type PetDto,
-        type PetMatchDto,
-        type ReportPetRequest
-    } from '~~/contracts/pets'
+    import { PET_LIMITS, type PetDto, type PetMatchDto, type ReportPetRequest } from '~~/contracts/pets'
 
     const { t } = useI18n()
     useHead(() => ({ title: `${t('publish_report')} · ${t('app_name')}` }))
 
     type PetForm = Omit<ReportPetRequest, 'images'>
-    interface Photo {
-        file: File
-        preview: string
-    }
 
     const api = usePetsApi()
 
@@ -30,8 +19,13 @@
         alive: true,
         eventDate: ''
     })
-    const photos = ref<Photo[]>([])
-    const dragging = ref(false)
+    const {
+        photos,
+        add: addPhotos,
+        remove: removePhoto,
+        setMain: setMainPhoto,
+        clear: clearPhotos
+    } = usePhotoSelection(PET_LIMITS.maxImages)
     const maxDate = new Date().toISOString().split('T')[0]
 
     const analyzing = ref(false)
@@ -61,30 +55,6 @@
         { value: 'cat', icon: 'mdi:cat' },
         { value: 'other', icon: 'mdi:rabbit' }
     ] as const
-
-    const addFiles = (files: FileList | File[] | null | undefined) => {
-        const images = Array.from(files ?? []).filter(file => file.type.startsWith('image/'))
-        const room = PET_LIMITS.maxImages - photos.value.length
-        photos.value.push(...images.slice(0, room).map(file => ({ file, preview: URL.createObjectURL(file) })))
-    }
-
-    const removePhoto = (index: number) => {
-        const [removed] = photos.value.splice(index, 1)
-        if (removed) URL.revokeObjectURL(removed.preview)
-    }
-
-    /** The first photo is the main one: it is shown on cards and used to pre-fill the details. */
-    const setMainPhoto = (index: number) => {
-        const [photo] = photos.value.splice(index, 1)
-        if (photo) photos.value.unshift(photo)
-    }
-
-    const onDrop = (event: DragEvent) => {
-        dragging.value = false
-        addFiles(event.dataTransfer?.files)
-    }
-
-    onBeforeUnmount(() => photos.value.forEach(photo => URL.revokeObjectURL(photo.preview)))
 
     /** Pre-fills the details from the main photo and looks for published pets that may be the same animal. */
     const goToDetails = async () => {
@@ -153,8 +123,7 @@
     }
 
     const startOver = () => {
-        photos.value.forEach(photo => URL.revokeObjectURL(photo.preview))
-        photos.value = []
+        clearPhotos()
         form.value = { ...form.value, name: '', description: '', location: '', eventDate: '', alive: true }
         published.value = null
         analysis.value = null
@@ -164,8 +133,7 @@
     }
 
     function errorMessage(error: unknown): string {
-        const apiError = error instanceof FetchError ? (error.data as ApiErrorDto | undefined)?.error : undefined
-        switch (apiError?.code) {
+        switch (apiErrorCode(error)) {
             case 'validation':
                 return t('error_validation')
             case 'content_rejected':
@@ -180,35 +148,7 @@
 
 <template>
     <div class="mx-auto max-w-2xl px-4 py-8 sm:px-6">
-        <!-- Done -->
-        <div v-if="published" class="surface flex flex-col items-center gap-4 px-6 py-12 text-center">
-            <span
-                class="grid h-16 w-16 place-items-center rounded-full text-white"
-                :class="published.moderationStatus === 'approved' ? 'bg-found' : 'bg-reunited'"
-            >
-                <Icon
-                    :name="published.moderationStatus === 'approved' ? 'mdi:check' : 'mdi:clock-outline'"
-                    size="2rem"
-                />
-            </span>
-            <h1 class="text-2xl sm:text-3xl">
-                {{ published.moderationStatus === 'approved' ? $t('published_title') : $t('pending_title') }}
-            </h1>
-            <p class="max-w-md text-muted">
-                {{ published.moderationStatus === 'approved' ? $t('published_text') : $t('pending_text') }}
-            </p>
-            <div class="mt-2 flex flex-wrap justify-center gap-2">
-                <NuxtLink
-                    v-if="published.moderationStatus === 'approved'"
-                    :to="{ name: 'mascota-id', params: { id: published.id } }"
-                    class="btn btn-primary"
-                >
-                    {{ $t('view_report') }}
-                </NuxtLink>
-                <NuxtLink to="/" class="btn btn-ghost">{{ $t('back_to_reports') }}</NuxtLink>
-                <button class="btn btn-ghost" @click="startOver">{{ $t('publish_another') }}</button>
-            </div>
-        </div>
+        <ReportDone v-if="published" :pet="published" @start-over="startOver" />
 
         <template v-else>
             <h1 class="text-3xl sm:text-4xl">{{ $t('publish_report') }}</h1>
@@ -261,63 +201,13 @@
                     </div>
                 </fieldset>
 
-                <fieldset>
-                    <legend class="mb-1 font-bold">{{ $t('photos') }}</legend>
-                    <p class="mb-3 text-sm text-muted">{{ $t('photos_hint', { max: PET_LIMITS.maxImages }) }}</p>
-                    <label
-                        class="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-box border-2 border-dashed px-6 py-10 text-center transition"
-                        :class="
-                            dragging
-                                ? 'border-primary bg-primary/5'
-                                : 'border-base-300 bg-white hover:border-primary/60'
-                        "
-                        @dragover.prevent="dragging = true"
-                        @dragleave.prevent="dragging = false"
-                        @drop.prevent="onDrop"
-                    >
-                        <Icon name="mdi:camera-plus-outline" size="2.25rem" class="text-primary" />
-                        <span class="font-semibold">{{ $t('add_photos') }}</span>
-                        <span class="text-sm text-muted">{{ $t('add_photos_hint') }}</span>
-                        <input
-                            type="file"
-                            accept="image/*"
-                            multiple
-                            class="sr-only"
-                            :disabled="photos.length >= PET_LIMITS.maxImages"
-                            @change="event => addFiles((event.target as HTMLInputElement).files)"
-                        />
-                    </label>
-                    <ul v-if="photos.length" class="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-4">
-                        <li v-for="(photo, index) in photos" :key="photo.preview" class="relative aspect-square">
-                            <button
-                                type="button"
-                                class="block h-full w-full rounded-xl"
-                                :class="index === 0 ? 'ring-2 ring-primary ring-offset-2' : 'opacity-90 hover:opacity-100'"
-                                :aria-label="index === 0 ? $t('main_photo') : $t('set_main_photo')"
-                                :aria-pressed="index === 0"
-                                :title="index === 0 ? $t('main_photo') : $t('set_main_photo')"
-                                @click="setMainPhoto(index)"
-                            >
-                                <img :src="photo.preview" alt="" class="h-full w-full rounded-xl object-cover" />
-                            </button>
-                            <span
-                                class="pointer-events-none absolute bottom-1 left-1 flex items-center gap-1 rounded-full px-2 text-xs"
-                                :class="index === 0 ? 'bg-primary text-primary-content' : 'bg-neutral/60 text-neutral-content'"
-                            >
-                                <Icon :name="index === 0 ? 'mdi:star' : 'mdi:star-outline'" />
-                                <template v-if="index === 0">{{ $t('main_photo') }}</template>
-                            </span>
-                            <button
-                                type="button"
-                                class="btn btn-circle btn-xs absolute -right-2 -top-2 shadow"
-                                :aria-label="$t('remove_photo')"
-                                @click="removePhoto(index)"
-                            >
-                                <Icon name="mdi:close" />
-                            </button>
-                        </li>
-                    </ul>
-                </fieldset>
+                <ReportPhotoPicker
+                    :photos="photos"
+                    :max="PET_LIMITS.maxImages"
+                    @add="addPhotos"
+                    @remove="removePhoto"
+                    @set-main="setMainPhoto"
+                />
 
                 <button
                     type="button"
@@ -334,44 +224,7 @@
 
             <!-- Step 2: details and contact -->
             <form v-else class="mt-6 space-y-5" @submit.prevent="submitForm">
-                <section v-if="similarPets.length" role="status" class="surface space-y-3 p-4 ring-2 ring-accent">
-                    <div class="flex items-start gap-3">
-                        <Icon name="mdi:paw" size="1.5rem" class="shrink-0 text-accent" />
-                        <div>
-                            <h2 class="font-bold">{{ $t('similar_pets_title') }}</h2>
-                            <p class="text-sm text-muted">{{ $t('similar_pets_text') }}</p>
-                        </div>
-                    </div>
-                    <ul class="space-y-2">
-                        <li v-for="{ pet, match } in similarPets" :key="pet.id">
-                            <NuxtLink
-                                :to="{ name: 'mascota-id', params: { id: pet.id } }"
-                                target="_blank"
-                                class="flex items-center gap-3 rounded-xl bg-base-200/60 p-2 transition hover:bg-base-200"
-                            >
-                                <img
-                                    :src="pet.images[0]"
-                                    alt=""
-                                    class="h-14 w-14 shrink-0 rounded-lg object-cover"
-                                    :class="{ 'blur-sm': !pet.alive }"
-                                />
-                                <span class="min-w-0 flex-1">
-                                    <span class="block truncate font-semibold">
-                                        {{ pet.name || $t(`unnamed_${pet.species}`) }}
-                                    </span>
-                                    <span class="block truncate text-sm text-muted">
-                                        {{ $t(pet.reportType === 'lost' ? 'status_lost' : 'status_found') }} · {{ pet.location }}
-                                    </span>
-                                </span>
-                                <span class="shrink-0 text-sm font-extrabold text-accent">
-                                    {{ $t('match_percentage', { match }) }}
-                                </span>
-                                <Icon name="mdi:open-in-new" class="shrink-0 text-muted" />
-                            </NuxtLink>
-                        </li>
-                    </ul>
-                    <p class="text-sm text-muted">{{ $t('similar_pets_continue') }}</p>
-                </section>
+                <SimilarPetsNotice v-if="similarPets.length" :matches="similarPets" />
 
                 <div v-if="analysis === 'filled'" role="status" class="alert bg-base-200">
                     <Icon name="mdi:auto-fix" size="1.5rem" class="text-primary" />

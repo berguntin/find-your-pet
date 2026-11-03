@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { PetDto } from '../contracts/pets'
+import type { PetDto } from '../../../contracts/pets'
 import { useMetadata } from './useMetadata'
 
 const BASE_URL = 'https://mascotas.test'

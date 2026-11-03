@@ -1,4 +1,4 @@
-import type { Metadata } from '~/types/Metadata'
+import type { Metadata } from '../types/Metadata'
 
 export const useMetadata = (pet: Pet | null): Metadata => {
     const config = useRuntimeConfig()

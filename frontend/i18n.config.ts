@@ -1,3 +1,5 @@
+import { adminMessagesEs } from './features/admin/locales/es'
+
 export default defineI18nConfig(() => ({
     legacy: false,
     locale: 'es',
@@ -5,6 +7,7 @@ export default defineI18nConfig(() => ({
 
     messages: {
         es: {
+            ...adminMessagesEs,
             app_name: 'Mascotas Encontradas',
             skip_to_content: 'Saltar al contenido',
             main_navigation: 'Navegación principal',
@@ -241,7 +244,8 @@ export default defineI18nConfig(() => ({
             i_found: 'I found a pet',
             i_found_hint: 'Help its family find it.',
             which_animal: 'Which animal is it?',
-            photos_hint: 'Up to {max} photos. Tap one to make it the main photo; ideally the animal is clearly visible.',
+            photos_hint:
+                'Up to {max} photos. Tap one to make it the main photo; ideally the animal is clearly visible.',
             add_photos: 'Add photos',
             add_photos_hint: 'Tap to choose them or drag them here',
             main_photo: 'Main',

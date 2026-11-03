@@ -3,6 +3,7 @@ import type { ReportPetData } from '../domain/Pet'
 import { createPetsModule, petsEventHandlers, type PetsModule } from '../index'
 import { FakeEmbedder } from '../infrastructure/FakeEmbedder'
 import { UnavailableEmbedder } from '../infrastructure/GeminiEmbedder'
+import { InMemoryModerationLog } from '../infrastructure/InMemoryModerationLog'
 import { InMemoryImageStorage } from '../infrastructure/InMemoryImageStorage'
 import { InMemoryPetEmbeddingIndex } from '../infrastructure/InMemoryPetEmbeddingIndex'
 import { InMemoryPetRepository } from '../infrastructure/InMemoryPetRepository'
@@ -34,7 +35,8 @@ describe('search', () => {
             pets: repository,
             images,
             describer: { describe: async () => null },
-            moderator: { review: async () => moderation },
+            moderator: { model: 'test-moderator', review: async () => moderation },
+            moderationLog: new InMemoryModerationLog(),
             embedder: overrides.embedder ?? embedder,
             embeddingIndex: index,
             // Photo vs photo: cos 1 → 100%, cos 0.9 → 0%, below hidden.

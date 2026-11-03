@@ -1,7 +1,4 @@
 <script setup lang="ts">
-    import { FetchError } from 'ofetch'
-    import type { ApiErrorDto, PetMatchDto } from '~~/contracts/pets'
-
     const { t } = useI18n()
 
     useHead(() => ({
@@ -64,42 +61,16 @@
         search.value = ''
     }
 
-    // Image search replaces the listing until the user goes back.
-    const imageResults = ref<PetMatchDto[] | null>(null)
-    const imageSearching = ref(false)
-    const imageSearchError = ref<string | null>(null)
-    const imageMatches = computed(() =>
-        Object.fromEntries((imageResults.value ?? []).map(result => [result.pet.id, result.match]))
-    )
-
-    const searchByImage = async (file: File) => {
-        imageSearching.value = true
-        imageSearchError.value = null
-        imageResults.value = null
-        try {
-            const image = await blobToDataUrl(await resizeImage(file, 768, 0.8))
-            imageResults.value = (await api.searchByImage(image)).items
-        } catch (err) {
-            const code = err instanceof FetchError ? (err.data as ApiErrorDto | undefined)?.error.code : undefined
-            imageSearchError.value =
-                code === 'unavailable'
-                    ? t('image_search_unavailable')
-                    : code === 'rate_limited'
-                    ? t('too_many_searches')
-                    : t('error_try_later')
-        } finally {
-            imageSearching.value = false
-        }
-    }
-
-    const exitImageSearch = () => {
-        imageResults.value = null
-        imageSearchError.value = null
-    }
-
-    const inImageSearch = computed(
-        () => imageSearching.value || imageResults.value !== null || !!imageSearchError.value
-    )
+    const {
+        active: inImageSearch,
+        searching: imageSearching,
+        error: imageSearchError,
+        results: imageResults,
+        pets: imagePets,
+        matches: imageMatches,
+        search: searchByImage,
+        exit: exitImageSearch
+    } = useImageSearch()
 </script>
 
 <template>
@@ -114,10 +85,10 @@
                     <Icon name="mdi:arrow-left" /> {{ $t('back_to_list') }}
                 </button>
             </div>
-            <ListPets v-if="imageSearching" :pets="[]" loading />
+            <PetList v-if="imageSearching" :pets="[]" loading />
             <EmptyState v-else-if="imageSearchError" icon="mdi:camera-off-outline" :title="imageSearchError" />
             <template v-else-if="imageResults">
-                <p v-if="imageResults.length" class="mb-4 text-sm text-muted">{{ $t('photo_search_results') }}</p>
+                <p v-if="imagePets.length" class="mb-4 text-sm text-muted">{{ $t('photo_search_results') }}</p>
                 <EmptyState
                     v-else
                     icon="mdi:image-search-outline"
@@ -126,7 +97,7 @@
                 >
                     <NuxtLink to="/registrar" class="btn btn-primary btn-sm">{{ $t('publish_report') }}</NuxtLink>
                 </EmptyState>
-                <ListPets :pets="imageResults.map(result => result.pet)" :matches="imageMatches" />
+                <PetList :pets="imagePets" :matches="imageMatches" />
             </template>
         </template>
 
@@ -139,7 +110,7 @@
                         {{ $t('clear_filters') }}
                     </button>
                 </div>
-                <AppFilters v-model="filters" />
+                <PetFilters v-model="filters" />
             </div>
 
             <EmptyState v-if="error" icon="mdi:cloud-alert-outline" :title="$t('error_try_later')" />
@@ -153,7 +124,7 @@
                 </button>
                 <NuxtLink to="/registrar" class="btn btn-primary btn-sm">{{ $t('publish_report') }}</NuxtLink>
             </EmptyState>
-            <ListPets v-else :pets="pets" :loading="loading" />
+            <PetList v-else :pets="pets" :loading="loading" />
 
             <div v-if="nextCursor && !loading" class="mt-8 flex justify-center">
                 <button class="btn btn-outline" :disabled="loadingMore" @click="loadMore">

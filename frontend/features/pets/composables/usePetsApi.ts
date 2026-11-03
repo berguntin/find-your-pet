@@ -13,6 +13,8 @@ import type {
 export const usePetsApi = () => ({
     list: (query: ListPetsQuery = {}) => $fetch<PetPageDto>('/api/v1/pets', { query }),
 
+    get: (id: string) => $fetch<PetDto>(`/api/v1/pets/${encodeURIComponent(id)}`),
+
     report: (body: ReportPetRequest) => $fetch<PetDto>('/api/v1/pets', { method: 'POST', body }),
 
     searchByImage: (image: DescribePetRequest['image']) =>

@@ -12,7 +12,7 @@
                 <h1 class="text-balance text-[1.75rem] leading-tight sm:text-5xl">{{ $t('hero_title') }}</h1>
                 <p class="mt-2 text-sm text-muted sm:mt-3 sm:text-lg">{{ $t('hero_subtitle') }}</p>
             </div>
-            <AppSearch
+            <PetSearchBar
                 class="mt-5 max-w-2xl sm:mt-6"
                 @update-query="text => emit('search', text)"
                 @search-by-image="file => emit('searchByImage', file)"

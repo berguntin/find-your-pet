@@ -1,3 +1,5 @@
+import type { ReportType, Species } from './values'
+
 /**
  * Probabilities (0..1) returned by the content moderator for a report.
  * `null` means the moderator declined to answer that question.
@@ -9,6 +11,35 @@ export interface ModerationScores {
 }
 
 export type ModerationDecision = 'approved' | 'pending_review' | 'rejected'
+
+/** Who took a moderation decision: the automatic moderator on a new report, or an admin afterwards. */
+export type ModerationSource = 'automatic' | 'admin'
+
+/** What the moderator reviewed, without contact details or images. Kept to audit rejections. */
+export interface ModerationSubmissionSummary {
+    reportType: ReportType
+    species: Species
+    name: string | null
+    description: string
+    location: string
+}
+
+/** One moderation decision, kept for the admin's statistics. */
+export interface ModerationRecord {
+    id: string
+    /** Null for automatic rejections: rejected reports never become pets. */
+    petId: string | null
+    source: ModerationSource
+    decision: ModerationDecision
+    scores: ModerationScores | null
+    /** Model that produced the scores; null when no model was involved. */
+    model: string | null
+    /** Why the moderator failed, when that sent the report to review. */
+    error: string | null
+    latencyMs: number | null
+    submission: ModerationSubmissionSummary | null
+    decidedAt: Date
+}
 
 export interface ModerationThresholds {
     /** Minimum probability of being a pet report to publish it automatically. */

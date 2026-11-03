@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { parseEmailList } from './adminEmails'
 
 // Nuxt parses NUXT_* values, so an all-digit secret (like a Cloudinary API key) can arrive as a number.
 const text = (name: string) =>
@@ -32,6 +33,7 @@ export function withRawSecrets(
         ...runtimeConfig,
         databaseUrl: raw('NUXT_DATABASE_URL', runtimeConfig.databaseUrl),
         adminToken: raw('NUXT_ADMIN_TOKEN', runtimeConfig.adminToken),
+        adminEmails: raw('NUXT_ADMIN_EMAILS', runtimeConfig.adminEmails),
         internalToken: raw('NUXT_INTERNAL_TOKEN', runtimeConfig.internalToken),
         cronSecret: env.CRON_SECRET,
         cloudinary: {
@@ -58,8 +60,10 @@ export function withRawSecrets(
 
 const configSchema = z.object({
     databaseUrl: required('NUXT_DATABASE_URL'),
-    /** Optional: without it, admin-only actions are disabled. */
+    /** Optional: bearer token for admin actions from scripts. */
     adminToken: optional(),
+    /** Optional: comma-separated Google emails allowed into the admin panel. Without it nobody can sign in. */
+    adminEmails: optional().transform(parseEmailList),
     /** Optional: secret for internal endpoints called by schedulers. Without it they are disabled. */
     internalToken: optional(),
     /** Secret Vercel Cron sends as a bearer token (CRON_SECRET), accepted on internal endpoints. */

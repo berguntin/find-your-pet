@@ -21,6 +21,12 @@ describe('usePetsApi', () => {
         expect($fetch).toHaveBeenCalledWith('/api/v1/pets', { query: { reportType: 'lost', q: 'gato' } })
     })
 
+    it('gets one pet by id', async () => {
+        await usePetsApi().get('f9cef7cc-bb44-4119-b78f-c9241d86c03d')
+
+        expect($fetch).toHaveBeenCalledWith('/api/v1/pets/f9cef7cc-bb44-4119-b78f-c9241d86c03d')
+    })
+
     it('reports a pet as JSON', async () => {
         const body = { reportType: 'found' } as never
         await usePetsApi().report(body)

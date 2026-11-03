@@ -7,10 +7,12 @@ import {
     SearchPetsByText,
     type SemanticSearchCalibration
 } from './application/search'
+import { GetModerationOverview, GetPetStats } from './application/stats'
 import type {
     ContentModerator,
     Embedder,
     ImageStorage,
+    ModerationLog,
     PetDescriber,
     PetEmbeddingIndex,
     PetRepository
@@ -25,7 +27,8 @@ import {
     ListPetsForModeration,
     MarkPetAsReunited,
     ModeratePet,
-    ReportPet
+    ReportPet,
+    UpdatePet
 } from './application/useCases'
 import { DEFAULT_MATCH_CALIBRATION, DEFAULT_SEMANTIC_CALIBRATION, type MatchCalibration } from './domain/matchScore'
 import { DEFAULT_MODERATION_THRESHOLDS, type ModerationThresholds } from './domain/moderation'
@@ -36,6 +39,7 @@ export interface PetsModuleDependencies {
     describer: PetDescriber
     moderator: ContentModerator
     moderationThresholds?: ModerationThresholds
+    moderationLog: ModerationLog
     embedder: Embedder
     embeddingIndex: PetEmbeddingIndex
     matchCalibration?: MatchCalibration
@@ -52,6 +56,7 @@ export function createPetsModule({
     describer,
     moderator,
     moderationThresholds = DEFAULT_MODERATION_THRESHOLDS,
+    moderationLog,
     embedder,
     embeddingIndex,
     matchCalibration = DEFAULT_MATCH_CALIBRATION,
@@ -63,13 +68,16 @@ export function createPetsModule({
     const searchByText = new SearchPetsByText(pets, embedder, embeddingIndex, semanticCalibration)
     const indexForSearch = new IndexPetForSearch(pets, images, embedder, embeddingIndex)
     return {
-        report: new ReportPet(pets, images, moderator, moderationThresholds, clock, ids, reportError),
+        report: new ReportPet(pets, images, moderator, moderationThresholds, moderationLog, clock, ids, reportError),
         search: new SearchPets(pets, searchByText, reportError),
         searchByText,
         listForModeration: new ListPetsForModeration(pets),
         get: new GetPet(pets),
         markAsReunited: new MarkPetAsReunited(pets, clock),
-        moderate: new ModeratePet(pets, images, clock, reportError),
+        moderate: new ModeratePet(pets, images, moderationLog, clock, ids, reportError),
+        update: new UpdatePet(pets, images, clock, reportError),
+        stats: new GetPetStats(pets, clock),
+        moderationOverview: new GetModerationOverview(moderationLog, pets, moderator, moderationThresholds, clock),
         delete: new DeletePet(pets, images, reportError),
         describe: new DescribePetFromImage(describer),
         authorizeImageUpload: new AuthorizeImageUpload(images),
@@ -86,9 +94,13 @@ export function petsEventHandlers(module: PetsModule) {
         if (typeof payload.petId !== 'string') throw new Error('Event without petId')
         return payload.petId
     }
+    // Indexing is idempotent and removes pets that are no longer public, so it serves all three.
+    const reindex = async (event: { payload: Record<string, unknown> }) =>
+        module.indexForSearch.execute(petId(event.payload))
     return {
-        'pet.published': async (event: { payload: Record<string, unknown> }) =>
-            module.indexForSearch.execute(petId(event.payload))
+        'pet.published': reindex,
+        'pet.edited': reindex,
+        'pet.unpublished': reindex
     }
 }
 
