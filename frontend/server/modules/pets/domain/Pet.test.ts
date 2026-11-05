@@ -165,3 +165,104 @@ describe('Pet moderation and events', () => {
         expect(Pet.restore(pet.toSnapshot()).pullEvents()).toEqual([])
     })
 })
+
+describe('Pet editing', () => {
+    const published = () => {
+        const pet = report()
+        pet.applyAutomaticModeration('approved', null, now)
+        pet.pullEvents()
+        return pet
+    }
+
+    it('changes any reported detail with the same rules as a report', () => {
+        const pet = published()
+        pet.edit(
+            {
+                reportType: 'lost',
+                species: 'cat',
+                name: ' Nala ',
+                description: 'Gata gris',
+                location: 'Sedaví',
+                contact: 'ana@example.com',
+                images: ['https://img/2.jpg', 'https://img/2.jpg'],
+                eventDate: '2026-10-10'
+            },
+            { kind: 'admin' },
+            now
+        )
+
+        expect(pet.toSnapshot()).toMatchObject({
+            reportType: 'lost',
+            species: 'cat',
+            name: 'Nala',
+            description: 'Gata gris',
+            location: 'Sedaví',
+            contact: 'ana@example.com',
+            images: ['https://img/2.jpg'],
+            alive: true,
+            eventDate: '2026-10-10',
+            id: 'pet-1',
+            createdAt: now
+        })
+    })
+
+    it('keeps omitted fields and clears the name when emptied', () => {
+        const pet = published()
+        pet.edit({ name: '', description: undefined }, { kind: 'admin' }, now)
+
+        expect(pet.toSnapshot()).toMatchObject({ name: null, description: 'Perro marrón con collar rojo' })
+    })
+
+    it('records an event when a published pet changes, so search is updated', () => {
+        const pet = published()
+        pet.edit({ location: 'Benetússer' }, { kind: 'admin' }, now)
+
+        expect(pet.pullEvents()).toEqual([{ type: 'pet.edited', occurredAt: now, payload: { petId: 'pet-1' } }])
+    })
+
+    it('records nothing when nothing changes or the pet is not published', () => {
+        const pet = published()
+        pet.edit({ location: 'Paiporta' }, { kind: 'admin' }, now)
+        const hidden = report()
+        hidden.edit({ location: 'Benetússer' }, { kind: 'admin' }, now)
+
+        expect(pet.pullEvents()).toEqual([])
+        expect(hidden.pullEvents()).toEqual([])
+        expect(hidden.toSnapshot().location).toBe('Benetússer')
+    })
+
+    it('rejects invalid details without changing anything', () => {
+        const pet = published()
+
+        expect(() => pet.edit({ description: ' ', location: 'Sedaví' }, { kind: 'admin' }, now)).toThrow(
+            ValidationError
+        )
+        expect(pet.toSnapshot().location).toBe('Paiporta')
+    })
+
+    it('requires managing the pet', () => {
+        expect(() => published().edit({ location: 'Sedaví' }, { kind: 'anonymous' }, now)).toThrow(ForbiddenError)
+    })
+
+    it('reopens a reunited pet', () => {
+        const pet = published()
+        pet.markAsReunited({ kind: 'admin' }, now)
+        pet.reopen({ kind: 'admin' })
+
+        expect(pet.toSnapshot()).toMatchObject({ resolution: 'open', resolvedBy: null, resolvedAt: null })
+        expect(() => pet.reopen({ kind: 'admin' })).toThrow(ConflictError)
+        expect(() => published().reopen({ kind: 'anonymous' })).toThrow(ForbiddenError)
+    })
+
+    it('lets admins hide a published pet back to review', () => {
+        const pet = published()
+        const later = new Date('2026-10-20T10:00:00Z')
+        pet.unpublish({ kind: 'admin' }, later)
+
+        expect(pet.isPublic).toBe(false)
+        expect(pet.toSnapshot().moderatedAt).toEqual(later)
+        expect(pet.pullEvents()).toEqual([{ type: 'pet.unpublished', occurredAt: later, payload: { petId: 'pet-1' } }])
+        expect(() => pet.unpublish({ kind: 'admin' }, later)).toThrow(ConflictError)
+        expect(() => published().unpublish({ kind: 'user', userId: 'user-1' }, later)).toThrow(ForbiddenError)
+    })
+})

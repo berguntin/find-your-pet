@@ -42,15 +42,6 @@ export const listPetsQuerySchema = z.object({
 })
 export type ListPetsQuery = z.input<typeof listPetsQuerySchema>
 
-export const adminListPetsQuerySchema = listPetsQuerySchema.extend({
-    moderationStatus: z.enum(MODERATION_STATUSES).optional()
-})
-
-export const moderatePetSchema = z.object({
-    status: z.enum(['approved', 'rejected'])
-})
-export type ModeratePetRequest = z.input<typeof moderatePetSchema>
-
 export const updatePetSchema = z.object({
     resolution: z.literal('reunited')
 })

@@ -2,7 +2,7 @@ import type { Page } from '../../../shared/application/ports'
 import { ValidationError } from '../../../shared/domain/errors'
 import type { Database } from '../../../shared/infrastructure/database'
 import { appendToOutbox } from '../../../shared/infrastructure/PostgresOutboxStore'
-import type { PetRepository, PetSearchCriteria } from '../application/ports'
+import type { DailyPetActivity, PetRepository, PetSearchCriteria, PetStateCount } from '../application/ports'
 import type { ModerationScores } from '../domain/moderation'
 import { Pet } from '../domain/Pet'
 import type { ModerationStatus, ReportType, Resolution, ResolvedBy, Species } from '../domain/values'
@@ -94,6 +94,30 @@ export class PostgresPetRepository implements PetRepository {
     async listAllImageUrls(): Promise<string[]> {
         const rows = await this.sql<{ url: string }[]>`select distinct unnest(images) as url from pets`
         return rows.map(row => row.url)
+    }
+
+    async countDailyActivity(since: Date, timeZone: string): Promise<DailyPetActivity[]> {
+        const sql = this.sql
+        return sql<DailyPetActivity[]>`
+            select to_char(created_at at time zone ${timeZone}, 'YYYY-MM-DD') as day, 'reported' as kind,
+                report_type as "reportType", species, count(*)::int as count
+            from pets where created_at >= ${since}
+            group by 1, 3, 4
+            union all
+            select to_char(resolved_at at time zone ${timeZone}, 'YYYY-MM-DD'), 'reunited',
+                report_type, species, count(*)::int
+            from pets where resolution = 'reunited' and resolved_at >= ${since}
+            group by 1, 3, 4
+        `
+    }
+
+    async countByState(): Promise<PetStateCount[]> {
+        return this.sql<PetStateCount[]>`
+            select report_type as "reportType", resolution, moderation_status as "moderationStatus",
+                count(*)::int as count
+            from pets
+            group by 1, 2, 3
+        `
     }
 
     async findById(id: string): Promise<Pet | null> {

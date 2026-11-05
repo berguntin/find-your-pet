@@ -15,6 +15,7 @@ describe('parseServerConfig', () => {
         const config = parseServerConfig(runtimeConfig())
 
         expect(config.adminToken).toBeUndefined()
+        expect(config.adminEmails).toEqual([])
         expect(config.internalToken).toBeUndefined()
         expect(config.openai.apiKey).toBeUndefined()
         expect(config.upstash).toEqual({ url: undefined, token: undefined })
@@ -50,6 +51,7 @@ describe('parseServerConfig', () => {
         const config = parseServerConfig(
             runtimeConfig({
                 adminToken: 'token',
+                adminEmails: 'Ana@example.com,luis@example.com',
                 internalToken: 'internal',
                 openai: { apiKey: 'sk-test' },
                 upstash: { url: 'https://redis.test', token: 'redis-token' }
@@ -57,6 +59,7 @@ describe('parseServerConfig', () => {
         )
 
         expect(config.adminToken).toBe('token')
+        expect(config.adminEmails).toEqual(['ana@example.com', 'luis@example.com'])
         expect(config.internalToken).toBe('internal')
         expect(config.openai).toEqual({
             apiKey: 'sk-test',
@@ -99,7 +102,8 @@ describe('withRawSecrets', () => {
             runtimeConfig({ cloudinary: { cloudName: 'cloud', apiKey: 9007199254740992, apiSecret: 'secret' } }),
             {
                 NUXT_CLOUDINARY_API_KEY: '9007199254740993',
-                NUXT_ADMIN_TOKEN: '000123'
+                NUXT_ADMIN_TOKEN: '000123',
+                NUXT_GEMINI_API_KEY: 'AIza-gemini'
             }
         )
 
@@ -107,6 +111,7 @@ describe('withRawSecrets', () => {
         expect(config.cloudinary.apiKey).toBe('9007199254740993')
         expect(config.adminToken).toBe('000123')
         expect(config.cloudinary.apiSecret).toBe('secret')
+        expect(config.gemini.apiKey).toBe('AIza-gemini')
     })
 
     it('keeps runtime config values that are not in the environment', () => {

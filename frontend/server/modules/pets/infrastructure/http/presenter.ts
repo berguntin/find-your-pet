@@ -1,5 +1,7 @@
 import type { PetDescriptionDto, PetDto, PetMatchListDto, PetPageDto } from '../../../../../contracts/pets'
+import type { AdminPetDto, AdminPetPageDto, ModerationOverviewDto } from '../../../../../contracts/admin'
 import type { PetMatch } from '../../application/search'
+import type { ModerationOverview } from '../../application/stats'
 import type { Page } from '../../../../shared/application/ports'
 import type { PetDescription } from '../../application/ports'
 import type { Pet } from '../../domain/Pet'
@@ -42,4 +44,21 @@ export function toPetDescriptionDto(description: PetDescription | null): PetDesc
         }
     }
     return { isPet: true, ...description }
+}
+
+/** Admins also see the moderation scores and when the pet was moderated. */
+export function toAdminPetDto(pet: Pet): AdminPetDto {
+    const { moderationScores, moderatedAt } = pet.toSnapshot()
+    return { ...toPetDto(pet), moderationScores, moderatedAt: moderatedAt?.toISOString() ?? null }
+}
+
+export function toAdminPetPageDto(page: Page<Pet>): AdminPetPageDto {
+    return { items: page.items.map(toAdminPetDto), nextCursor: page.nextCursor }
+}
+
+export function toModerationOverviewDto(overview: ModerationOverview): ModerationOverviewDto {
+    return {
+        ...overview,
+        recent: overview.recent.map(record => ({ ...record, decidedAt: record.decidedAt.toISOString() }))
+    }
 }

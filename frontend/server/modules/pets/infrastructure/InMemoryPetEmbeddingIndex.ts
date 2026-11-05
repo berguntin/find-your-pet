@@ -23,6 +23,10 @@ export class InMemoryPetEmbeddingIndex implements PetEmbeddingIndex {
             .sort((a, b) => b.similarity - a.similarity)
             .slice(0, limit)
     }
+
+    async findIndexed(petIds: string[], model: string): Promise<Set<string>> {
+        return new Set(petIds.filter(petId => this.entries.get(petId)?.model === model))
+    }
 }
 
 export function cosine(a: number[], b: number[]): number {

@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { parseEmailList } from './adminEmails'
 
 // Nuxt parses NUXT_* values, so an all-digit secret (like a Cloudinary API key) can arrive as a number.
 const text = (name: string) =>
@@ -16,7 +17,12 @@ const optional = () =>
  * Values not set in the environment keep the runtime config ones.
  */
 type Section = Record<string, unknown>
-type RuntimeConfigInput = Record<string, unknown> & { cloudinary?: Section; openai?: Section; upstash?: Section }
+type RuntimeConfigInput = Record<string, unknown> & {
+    cloudinary?: Section
+    openai?: Section
+    gemini?: Section
+    upstash?: Section
+}
 
 export function withRawSecrets(
     runtimeConfig: RuntimeConfigInput,
@@ -27,6 +33,7 @@ export function withRawSecrets(
         ...runtimeConfig,
         databaseUrl: raw('NUXT_DATABASE_URL', runtimeConfig.databaseUrl),
         adminToken: raw('NUXT_ADMIN_TOKEN', runtimeConfig.adminToken),
+        adminEmails: raw('NUXT_ADMIN_EMAILS', runtimeConfig.adminEmails),
         internalToken: raw('NUXT_INTERNAL_TOKEN', runtimeConfig.internalToken),
         cronSecret: env.CRON_SECRET,
         cloudinary: {
@@ -39,6 +46,10 @@ export function withRawSecrets(
             ...runtimeConfig.openai,
             apiKey: raw('NUXT_OPENAI_API_KEY', runtimeConfig.openai?.apiKey)
         },
+        gemini: {
+            ...runtimeConfig.gemini,
+            apiKey: raw('NUXT_GEMINI_API_KEY', runtimeConfig.gemini?.apiKey)
+        },
         // Also accept the variable names the Upstash integration for Vercel creates.
         upstash: {
             url: raw('NUXT_UPSTASH_URL', runtimeConfig.upstash?.url) || env.UPSTASH_REDIS_REST_URL,
@@ -49,8 +60,10 @@ export function withRawSecrets(
 
 const configSchema = z.object({
     databaseUrl: required('NUXT_DATABASE_URL'),
-    /** Optional: without it, admin-only actions are disabled. */
+    /** Optional: bearer token for admin actions from scripts. */
     adminToken: optional(),
+    /** Optional: comma-separated Google emails allowed into the admin panel. Without it nobody can sign in. */
+    adminEmails: optional().transform(parseEmailList),
     /** Optional: secret for internal endpoints called by schedulers. Without it they are disabled. */
     internalToken: optional(),
     /** Secret Vercel Cron sends as a bearer token (CRON_SECRET), accepted on internal endpoints. */

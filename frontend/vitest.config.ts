@@ -5,12 +5,18 @@ export default defineConfig({
         environment: 'node',
         // Integration test files share one database and empty its tables: run them one at a time.
         fileParallelism: !process.env.TEST_DATABASE_URL,
-        include: ['{server,contracts,composables,utils,scripts}/**/*.test.ts'],
+        include: ['{server,contracts,features,utils,scripts}/**/*.test.ts'],
         coverage: {
             provider: 'v8',
-            include: ['server/**/*.ts', 'contracts/**/*.ts', 'composables/**/*.ts', 'utils/**/*.ts', 'scripts/lib/**/*.ts'],
+            include: [
+                'server/**/*.ts',
+                'contracts/**/*.ts',
+                'features/**/*.ts',
+                'utils/**/*.ts',
+                'scripts/lib/**/*.ts'
+            ],
             // Wiring, Nuxt-only code and browser canvas helpers are covered by the build and manual checks.
-            exclude: ['**/*.test.ts', 'server/container.ts', 'server/test/**', 'utils/images.ts'],
+            exclude: ['**/*.test.ts', 'server/container.ts', 'server/routes/auth/**', 'server/test/**', 'utils/images.ts'],
             reporter: ['text-summary', 'text'],
             // Enforced only with a database (as in CI): otherwise the Postgres adapter tests are skipped.
             thresholds: process.env.TEST_DATABASE_URL

@@ -49,6 +49,19 @@ export interface ReportPetData {
     eventDate: string
 }
 
+/** Details an edit can change: everything the reporter wrote. */
+const EDITABLE_FIELDS = [
+    'reportType',
+    'species',
+    'name',
+    'description',
+    'location',
+    'contact',
+    'images',
+    'alive',
+    'eventDate'
+] as const satisfies readonly (keyof PetProps)[]
+
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
 const ONE_DAY_MS = 24 * 60 * 60 * 1000
 
@@ -147,6 +160,49 @@ export class Pet {
         this.recordPublished(now)
     }
 
+    /** An admin hides a published pet again, back to the review queue. */
+    unpublish(actor: Actor, now: Date): void {
+        if (actor.kind !== 'admin') throw new ForbiddenError()
+        if (!this.isPublic) throw new ConflictError('The pet is not published')
+
+        this.props.moderationStatus = 'pending_review'
+        this.props.moderatedAt = now
+        this.events.push({ type: 'pet.unpublished', occurredAt: now, payload: { petId: this.props.id } })
+    }
+
+    /**
+     * Corrects any detail of the report, with the same rules as a new report. A published pet that
+     * changes records an event so search reflects the new details.
+     */
+    edit(changes: Partial<ReportPetData>, actor: Actor, now: Date): void {
+        this.assertCanBeManagedBy(actor)
+
+        const current = this.props
+        const edited = Pet.report(
+            {
+                reportType: current.reportType,
+                species: current.species,
+                name: current.name,
+                description: current.description,
+                location: current.location,
+                contact: current.contact,
+                images: current.images,
+                alive: current.alive,
+                eventDate: current.eventDate,
+                ...definedOnly(changes)
+            },
+            { id: current.id, now }
+        ).props
+
+        const changed = EDITABLE_FIELDS.filter(
+            field => JSON.stringify(current[field]) !== JSON.stringify(edited[field])
+        )
+        if (changed.length === 0) return
+
+        for (const field of changed) Object.assign(this.props, { [field]: edited[field] })
+        if (this.isPublic) this.events.push({ type: 'pet.edited', occurredAt: now, payload: { petId: current.id } })
+    }
+
     canBeManagedBy(actor: Actor): boolean {
         if (actor.kind === 'admin') return true
         return actor.kind === 'user' && this.props.ownerId !== null && actor.userId === this.props.ownerId
@@ -166,9 +222,23 @@ export class Pet {
         this.events.push({ type: 'pet.reunited', occurredAt: now, payload: { petId: this.props.id } })
     }
 
+    /** Undoes "reunited": the pet is still missing after all. */
+    reopen(actor: Actor): void {
+        this.assertCanBeManagedBy(actor)
+        if (!this.isReunited) throw new ConflictError('The pet is already open')
+
+        this.props.resolution = 'open'
+        this.props.resolvedBy = null
+        this.props.resolvedAt = null
+    }
+
     private recordPublished(now: Date): void {
         this.events.push({ type: 'pet.published', occurredAt: now, payload: { petId: this.props.id } })
     }
+}
+
+function definedOnly<T extends object>(value: T): Partial<T> {
+    return Object.fromEntries(Object.entries(value).filter(([, v]) => v !== undefined)) as Partial<T>
 }
 
 function requiredText(value: string, field: string, maxLength: number): string {

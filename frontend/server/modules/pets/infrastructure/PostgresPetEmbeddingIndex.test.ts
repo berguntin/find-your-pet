@@ -121,6 +121,14 @@ describe.skipIf(!url)('PostgresPetEmbeddingIndex', () => {
         expect((await index.findSimilar(vector(0), 'model-a', 1, 'image')).map(r => r.petId)).toEqual([ids[1]])
     })
 
+    it('tells which pets are indexed for a model', async () => {
+        await index.replace(ids[0]!, 'model-a', { images: [], text: vector(0) })
+        await index.replace(ids[1]!, 'model-b', { images: [], text: vector(0) })
+
+        expect(await index.findIndexed(ids, 'model-a')).toEqual(new Set([ids[0]]))
+        expect(await index.findIndexed([], 'model-a')).toEqual(new Set())
+    })
+
     it('rejects vectors with the wrong dimensions', async () => {
         await expect(
             index.replace(ids[0]!, 'm', { images: [{ imageUrl: 'x', vector: [1, 2] }], text: vector(0) })

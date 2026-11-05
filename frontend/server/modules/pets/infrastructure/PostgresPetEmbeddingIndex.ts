@@ -52,6 +52,15 @@ export class PostgresPetEmbeddingIndex implements PetEmbeddingIndex {
         `
         return rows.map(row => ({ petId: row.pet_id, similarity: Number(row.similarity) }))
     }
+
+    async findIndexed(petIds: string[], model: string): Promise<Set<string>> {
+        if (petIds.length === 0) return new Set()
+        // Every indexed pet has a text vector, even without photos.
+        const rows = await this.sql<{ pet_id: string }[]>`
+            select pet_id from pet_text_embeddings where model = ${model} and pet_id in ${this.sql(petIds)}
+        `
+        return new Set(rows.map(row => row.pet_id))
+    }
 }
 
 function toVector(vector: number[]): string {

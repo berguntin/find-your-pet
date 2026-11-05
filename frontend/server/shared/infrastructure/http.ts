@@ -14,6 +14,7 @@ import type { ApiErrorDto } from '../../../contracts/pets'
 import type { RateLimiter, RateLimitPolicy } from '../application/rateLimit'
 import type { Actor } from '../domain/actor'
 import { DomainError, ValidationError, type DomainErrorCode } from '../domain/errors'
+import { isAdminEmail } from './adminEmails'
 import { RateLimitedError, ServiceUnavailableError, UnauthorizedError } from './errors'
 
 export { RateLimitedError, ServiceUnavailableError, UnauthorizedError }
@@ -50,9 +51,21 @@ export function parseWith<Output, Input>(schema: ZodType<Output, ZodTypeDef, Inp
     return result.data
 }
 
-/** Until Google login exists the only privileged actor is an admin using `Authorization: Bearer <token>`. */
-export function getActor(event: H3Event, adminToken: string | undefined): Actor {
-    if (adminToken && hasBearerToken(event, adminToken)) return { kind: 'admin' }
+/** How a request proves it comes from an admin: a bearer token (scripts) or a panel session. */
+export interface AdminAccess {
+    adminToken: string | undefined
+    adminEmails: string[]
+    /** Email of the signed-in Google account, if any. */
+    sessionEmail(event: H3Event): Promise<string | null>
+}
+
+/**
+ * The only privileged actor so far is an admin: `Authorization: Bearer <token>`, or a panel session whose
+ * email is still on the allowlist (checked on every request, so removing an email revokes access at once).
+ */
+export async function getActor(event: H3Event, access: AdminAccess): Promise<Actor> {
+    if (access.adminToken && hasBearerToken(event, access.adminToken)) return { kind: 'admin' }
+    if (isAdminEmail(await access.sessionEmail(event), access.adminEmails)) return { kind: 'admin' }
     return { kind: 'anonymous' }
 }
 

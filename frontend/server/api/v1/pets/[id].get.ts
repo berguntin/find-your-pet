@@ -6,9 +6,9 @@ import { NotFoundError } from '../../../shared/domain/errors'
 import { defineApiHandler, getActor } from '../../../shared/infrastructure/http'
 
 export default defineApiHandler(async event => {
-    const { pets, config } = useContainer()
+    const { pets, adminAccess } = useContainer()
     const id = petIdSchema.safeParse(getRouterParam(event, 'id'))
     if (!id.success) throw new NotFoundError('Pet not found')
 
-    return toPetDto(await pets.get.execute(id.data, getActor(event, config.adminToken)))
+    return toPetDto(await pets.get.execute(id.data, await getActor(event, adminAccess)))
 })
