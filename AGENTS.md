@@ -1,6 +1,6 @@
 # Lost and found pets finder
 
-Lost and found pets board (it started with the DANA floods in Valencia). People post reports and search them in two ways: by text with semantic search ("perro negro" finds black dogs even if the report doesn't say so) and by photo (pets that look like an image).
+"Mascotas Encontradas", a lost and found pets board (it started with the DANA floods in Valencia). People post reports and search them in two ways: by text with semantic search ("perro negro" finds black dogs even if the report doesn't say so) and by photo (pets that look like an image).
 
 API, environment variables and deployment details: [README.md](README.md). Decisions and plans: [docs/](docs/).
 
@@ -11,7 +11,8 @@ API, environment variables and deployment details: [README.md](README.md). Decis
 - **OpenAI**: report moderation (Decisions API, `gpt-6-luna`) and form pre-fill from the photo (`describe`).
 - **Images**: Cloudinary. The browser uploads directly with a server-generated signature (Vercel has a 4.5 MB request limit); the server only receives URLs.
 - **Rate limiting**: Upstash Redis. **Deployment**: Vercel (Hobby) + Supabase. Scheduled jobs on GitHub Actions (`scheduled-jobs.yml`), with Vercel Cron as a fallback.
-- UI: Tailwind + daisyUI, `@nuxtjs/i18n` (`es` only), `@nuxt/content` for legal pages. Validation with zod.
+- **Admin panel** (`/admin`, Spanish only): Google sign-in with `nuxt-auth-utils` (sealed session cookie), restricted to `NUXT_ADMIN_EMAILS`.
+- UI: Tailwind + daisyUI, `@nuxtjs/i18n` (`es` default, `en`), `@nuxt/content` for legal pages. Validation with zod.
 - Node 24, **npm** (not pnpm).
 
 ## Commands (from `frontend/`)
@@ -34,20 +35,25 @@ frontend/server/
   container.ts                  composition root: the only place that picks adapters
   api/v1/                       thin handlers: validate → use case → presenter
 frontend/contracts/             zod schemas and DTOs shared with the browser
-frontend/composables/usePetsApi.ts  typed client used by pages
+frontend/features/<feature>/    UI by feature (pets, report, search, sharing, admin): components/, composables/, utils/, types/
+frontend/pages/ · layouts/      routes: they compose features and hold no API URLs
+frontend/components/ · utils/   generic, feature-agnostic UI and helpers
 ```
+- API calls go through the typed clients (`features/pets/composables/usePetsApi.ts`, `features/admin/composables/useAdminApi.ts`), never `$fetch` with loose URLs in pages.
+- Everything under `features/*/` is auto-imported (components without a folder prefix): a new feature folder needs no config.
 - `domain/` and `application/` are plain TypeScript: no Nuxt/h3/auto-imports (`useRuntimeConfig`, `readBody`…), no `postgres`, `cloudinary`, `openai`, and no `infrastructure/` or `contracts/`. ESLint enforces it; don't disable it, add a port.
 - `contracts/` only imports zod and domain values (it is bundled into the browser).
 - Every external adapter has an in-memory/disabled version (`InMemory*`, `Fake*`, `Disabled*`, `Unavailable*`). Without a key, features degrade instead of breaking: without Gemini, photo search returns 503 and `q` is keyword-only; without OpenAI, development approves everything and production sends everything to review.
 - Side effects (embedding indexing, future notifications) go through the **outbox**: the event is stored with the change and processed after the response. Don't put slow external API calls on the report path.
 - HTTP errors always look like `{ "error": { "code", "message", "details" } }`; `429` includes `Retry-After`.
-- Admin: `Authorization: Bearer $NUXT_ADMIN_TOKEN` (until Google login exists). Internal endpoints: `$NUXT_INTERNAL_TOKEN` / `CRON_SECRET`.
+- Admin endpoints accept the admin panel session (the email list is re-checked on every request) or `Authorization: Bearer $NUXT_ADMIN_TOKEN` for scripts. Internal endpoints: `$NUXT_INTERNAL_TOKEN` / `CRON_SECRET`.
 - Database: every schema change is a new migration; never edit one that has already been applied.
 
 ## Product rules
 - A report is "lost" or "found"; search crosses both types (a lost pet can match a found one).
 - Photo and semantic results are suggestions, not certainties: the UI shows approximate matches (calibrated percentage) and never claims "this is your pet".
 - Only `approved` reports are shown. `pending_review` stays hidden (404 except for admins); `rejected` is not stored and its images are deleted.
+- Every moderation decision (automatic or by an admin) is stored in `moderation_decisions` for auditing, without contact details or photos.
 - Keyword hits (names, phone numbers, towns) come before semantic ones.
 
 ## Search: how to change it
@@ -56,6 +62,7 @@ frontend/composables/usePetsApi.ts  typed client used by pages
   - model quality on photos: `npm run eval:embeddings` on a local labelled dataset (`frontend/dataset/`, git-ignored because it contains real photos).
 - Calibration lives in the `NUXT_IMAGE_SEARCH_*` and `NUXT_SEMANTIC_SEARCH_*` variables (floor/ceiling). The text ones are provisional.
 - Never compare vectors from different models (the index stores the model). After changing the model: `npm run reindex:search`.
+- A nightly backfill (`/api/internal/search/backfill`) indexes published pets missing from the index; it is a safety net, not a replacement for the outbox.
 
 ## Privacy and security (critical)
 - Photos: strip EXIF metadata (including geolocation) before storing them. Validate type (jpg, png, webp, heic) and size; only URLs from our own Cloudinary are accepted (`ImageStorage.isManagedUrl`).
@@ -73,7 +80,7 @@ frontend/composables/usePetsApi.ts  typed client used by pages
 - Prettier: 4 spaces, single quotes, no semicolons, 120 columns.
 - Basic accessibility in forms, lists and images (descriptive `alt`).
 - Mobile first: most people will upload the photo from their phone.
-- UI text in Spanish via i18n.
+- All UI text via i18n (`es` and `en`; the admin panel is Spanish only, in `features/admin/locales/`). No hard-coded strings.
 
 ## Workflow
 - Reply to the user in Spanish; code, variable names, comments and commits in English.

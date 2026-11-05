@@ -23,7 +23,7 @@ Review the pending diff (staged and unstaged; if given a branch or commit, that 
 4. **Database**: a new migration for every schema change; existing ones are never modified; indexes for new queries.
 5. **Tests**: new behaviour has tests next to the code; HTTP tests in `server/test/`; Postgres adapters have integration tests.
 6. **Product**: only `approved` reports are exposed; search crosses lost and found; the UI never claims "this is your pet".
-7. **Frontend**: mobile first, descriptive `alt`, labelled form fields, UI text via i18n in Spanish, no `v-html` with user content.
+7. **Frontend**: mobile first, descriptive `alt`, labelled form fields, UI text via i18n (`es` and `en`; admin is Spanish only), API calls through the typed clients, no `v-html` with user content.
 8. **Docs**: new endpoint or variable → README and `.env.example` updated.
 
 If the diff touches photos, personal data or contact details, say so and recommend also running `privacy-reviewer`. If it touches search, embeddings or calibration, recommend `search-reviewer`.
