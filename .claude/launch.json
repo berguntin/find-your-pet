@@ -1,0 +1,32 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "nuxt-local-test-db",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "cd frontend && NUXT_DATABASE_URL='postgres://postgres:test@localhost:55432/pets_test?sslmode=disable' NUXT_CLOUDINARY_CLOUD_NAME=demo-cloud NUXT_CLOUDINARY_API_KEY=test-key NUXT_CLOUDINARY_API_SECRET=test-secret NUXT_ADMIN_TOKEN=local-admin-token NUXT_INTERNAL_TOKEN=local-internal-token npm run dev"
+      ],
+      "port": 8000
+    },
+    {
+      "name": "nuxt-numeric-cloudinary-key",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "cd frontend && NUXT_DATABASE_URL='postgres://postgres:test@localhost:55432/pets_test?sslmode=disable' NUXT_CLOUDINARY_CLOUD_NAME=demo-cloud NUXT_CLOUDINARY_API_KEY=9007199254740993 NUXT_CLOUDINARY_API_SECRET=test-secret NUXT_ADMIN_TOKEN=local-admin-token NUXT_INTERNAL_TOKEN=local-internal-token npm run dev"
+      ],
+      "port": 8000
+    },
+    {
+      "name": "nuxt-admin-panel",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "cd frontend && NUXT_DATABASE_URL='postgres://postgres:postgres@localhost:55432/pets_test?sslmode=disable' NUXT_CLOUDINARY_CLOUD_NAME=demo NUXT_CLOUDINARY_API_KEY=test-key NUXT_CLOUDINARY_API_SECRET=test-secret NUXT_ADMIN_EMAILS=admin@example.test NUXT_SESSION_PASSWORD=local-admin-panel-session-password-0123456789 NUXT_INTERNAL_TOKEN=local-internal-token npm run dev"
+      ],
+      "port": 8000
+    }
+  ]
+}
