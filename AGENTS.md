@@ -84,7 +84,8 @@ frontend/components/ · utils/   generic, feature-agnostic UI and helpers
 
 ## Workflow
 - Reply to the user in Spanish; code, variable names, comments and commits in English.
-- Conventional Commits (`feat:`, `fix:`, `docs:`…), on `feat/…` / `fix/…` branches with a PR to `main`.
+- Every new task starts from an up-to-date `main`: `git fetch origin` and branch off `origin/main` (never off a stale local `main` or another feature branch). If `main` moves while you work, bring it in before opening or updating the PR.
+- Changes always reach `main` through a pull request: never commit or push directly to `main`. One branch per task (`feat/…`, `fix/…`, `docs/…`, `refactor/…`), Conventional Commits (`feat:`, `fix:`, `docs:`…).
 - Before calling something done: `npm run lint && npm run typecheck && npm test` (plus `npm run build` if you touch Nuxt config or routes).
 - If the change touches photo uploads, personal data or contact details, explicitly review it against the privacy section; if it touches search, against the search section.
 - Don't edit `.env` or commit secrets. Hugo manages secrets; if a new variable is needed, add it to `.env.example` with a comment and to `server/shared/infrastructure/config.ts`.
