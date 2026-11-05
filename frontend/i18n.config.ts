@@ -145,7 +145,6 @@ export default defineI18nConfig(() => ({
             community_project: 'Proyecto comunitario',
             do_you_want_to_collaborate: '¿Quieres colaborar? El código es abierto.',
             github_link: 'Repositorio del proyecto en GitHub',
-            discord_link: 'Servidor de Discord del proyecto',
             footer: 'Todos los derechos reservados.'
         },
         en: {
@@ -284,7 +283,6 @@ export default defineI18nConfig(() => ({
             community_project: 'Community project',
             do_you_want_to_collaborate: 'Want to help? The code is open source.',
             github_link: 'Project repository on GitHub',
-            discord_link: 'Project Discord server',
             footer: 'All rights reserved.'
         }
     }

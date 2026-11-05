@@ -40,15 +40,6 @@
                     >
                         <Icon name="uil:github" size="1.25rem" />
                     </a>
-                    <a
-                        href="https://discord.gg/caHyUjkdrc"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        :aria-label="$t('discord_link')"
-                        class="btn btn-circle btn-sm btn-ghost text-neutral-content"
-                    >
-                        <Icon name="uil:discord" size="1.25rem" />
-                    </a>
                 </div>
             </div>
         </div>
