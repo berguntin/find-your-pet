@@ -30,16 +30,20 @@ export class PostgresOutboxStore implements OutboxStore {
     constructor(private readonly sql: Database) {}
 
     async claim(limit: number, now: Date): Promise<OutboxEntry[]> {
+        // A materialized CTE picks the batch once: as an `in (...)` subquery, Postgres may evaluate the
+        // `limit ... skip locked` more than once and lease more events than asked for.
         const rows = await this.sql<OutboxRow[]>`
-            update outbox set available_at = ${new Date(now.getTime() + LEASE_MS)}
-            where id in (
+            with picked as materialized (
                 select id from outbox
                 where processed_at is null and dead_at is null and available_at <= ${now}
                 order by available_at
                 limit ${limit}
                 for update skip locked
             )
-            returning id, type, payload, occurred_at, attempts
+            update outbox set available_at = ${new Date(now.getTime() + LEASE_MS)}
+            from picked
+            where outbox.id = picked.id
+            returning outbox.id, outbox.type, outbox.payload, outbox.occurred_at, outbox.attempts
         `
         return rows.map(row => ({
             event: { id: row.id, type: row.type, payload: row.payload, occurredAt: row.occurred_at },
