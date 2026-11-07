@@ -15,7 +15,7 @@ export interface RateLimiter {
     consume(policy: RateLimitPolicy, key: string): Promise<RateLimitResult>
 }
 
-/** Limits for endpoints that cost money (AI calls) or can be abused, per client IP. */
+/** Limits for endpoints that cost money (AI calls) or can be abused, per client IP unless noted. */
 export const RATE_LIMITS = {
     describe: { name: 'describe', limit: 10, windowSeconds: 10 * 60 },
     reportPet: { name: 'report-pet', limit: 10, windowSeconds: 60 * 60 },
@@ -23,5 +23,11 @@ export const RATE_LIMITS = {
     // Typing in the search box triggers it (debounced), so it is generous; over it, keywords only.
     semanticSearch: { name: 'semantic-search', limit: 60, windowSeconds: 10 * 60 },
     uploadSignature: { name: 'upload-signature', limit: 60, windowSeconds: 60 * 60 },
-    deleteAccount: { name: 'delete-account', limit: 5, windowSeconds: 60 * 60 }
+    deleteAccount: { name: 'delete-account', limit: 5, windowSeconds: 60 * 60 },
+    // Per user (they need an account): a few sightings an hour, more validations.
+    reportSighting: { name: 'report-sighting', limit: 5, windowSeconds: 60 * 60 },
+    validateSighting: { name: 'validate-sighting', limit: 30, windowSeconds: 60 * 60 },
+    // Also per IP, so several accounts from one place cannot multiply the limits (or fake a verification).
+    reportSightingFromIp: { name: 'report-sighting-ip', limit: 15, windowSeconds: 60 * 60 },
+    validateSightingFromIp: { name: 'validate-sighting-ip', limit: 60, windowSeconds: 60 * 60 }
 } as const satisfies Record<string, RateLimitPolicy>

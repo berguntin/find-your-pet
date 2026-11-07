@@ -1,6 +1,8 @@
 import { adminMessagesEs } from './features/admin/locales/es'
 import { authMessagesEn } from './features/auth/locales/en'
 import { authMessagesEs } from './features/auth/locales/es'
+import { sightingsMessagesEn } from './features/sightings/locales/en'
+import { sightingsMessagesEs } from './features/sightings/locales/es'
 
 export default defineI18nConfig(() => ({
     legacy: false,
@@ -11,6 +13,7 @@ export default defineI18nConfig(() => ({
         es: {
             ...adminMessagesEs,
             ...authMessagesEs,
+            ...sightingsMessagesEs,
             app_name: 'Mascotas Encontradas',
             skip_to_content: 'Saltar al contenido',
             main_navigation: 'Navegación principal',
@@ -152,6 +155,7 @@ export default defineI18nConfig(() => ({
         },
         en: {
             ...authMessagesEn,
+            ...sightingsMessagesEn,
             app_name: 'Mascotas Encontradas',
             skip_to_content: 'Skip to content',
             main_navigation: 'Main navigation',

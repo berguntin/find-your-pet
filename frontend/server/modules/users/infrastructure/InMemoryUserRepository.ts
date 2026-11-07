@@ -24,6 +24,10 @@ export class InMemoryUserRepository implements UserRepository {
         return user
     }
 
+    async displayNames(ids: string[]): Promise<Map<string, string>> {
+        return new Map(ids.flatMap(id => (this.users.has(id) ? [[id, this.users.get(id)!.displayName]] : [])))
+    }
+
     async exists(id: string): Promise<boolean> {
         return this.users.has(id)
     }

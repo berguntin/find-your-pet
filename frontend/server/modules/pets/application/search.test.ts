@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ReportPetData } from '../domain/Pet'
 import { createPetsModule, petsEventHandlers, type PetsModule } from '../index'
+import { InMemorySightingRepository } from '../infrastructure/InMemorySightingRepository'
 import { FakeEmbedder } from '../infrastructure/FakeEmbedder'
 import { UnavailableEmbedder } from '../infrastructure/GeminiEmbedder'
 import { InMemoryModerationLog } from '../infrastructure/InMemoryModerationLog'
@@ -32,6 +33,8 @@ describe('search', () => {
 
     const build = (overrides: { embedder?: FakeEmbedder | UnavailableEmbedder } = {}) =>
         createPetsModule({
+            sightings: new InMemorySightingRepository(),
+            authors: { displayNames: async () => new Map() },
             pets: repository,
             images,
             describer: { describe: async () => null },

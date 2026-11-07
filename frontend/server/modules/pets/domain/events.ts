@@ -13,3 +13,11 @@ export type PetEdited = RecordedEvent<'pet.edited', { petId: string }>
 export type PetUnpublished = RecordedEvent<'pet.unpublished', { petId: string }>
 
 export type PetEvent = PetPublished | PetReunited | PetEdited | PetUnpublished
+
+/** A sighting became visible on its pet's page. */
+export type SightingPublished = RecordedEvent<'sighting.published', { sightingId: string; petId: string }>
+
+/** A sighting reached the verification threshold. */
+export type SightingVerified = RecordedEvent<'sighting.verified', { sightingId: string; petId: string }>
+
+export type SightingEvent = SightingPublished | SightingVerified

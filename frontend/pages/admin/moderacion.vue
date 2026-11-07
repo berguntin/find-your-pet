@@ -200,6 +200,9 @@
                                     </div>
                                 </td>
                                 <td class="max-w-xs">
+                                    <span v-if="decision.sightingId" class="badge badge-ghost badge-sm mr-1">
+                                        {{ $t('admin_nav_sightings') }}
+                                    </span>
                                     <NuxtLink
                                         v-if="decision.petId && decision.decision !== 'rejected'"
                                         :to="`/admin/mascotas/${decision.petId}`"

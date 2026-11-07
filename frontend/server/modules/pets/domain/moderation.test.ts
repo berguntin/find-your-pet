@@ -13,6 +13,12 @@ describe('decideModeration', () => {
         expect(decideModeration(scores())).toBe('approved')
     })
 
+    it('ignores "shows an animal" when there are no images (sightings without photos)', () => {
+        expect(decideModeration(scores({ showsAnimal: 0.01 }), undefined, { hasImages: false })).toBe('approved')
+        expect(decideModeration(scores({ showsAnimal: null }), undefined, { hasImages: false })).toBe('approved')
+        expect(decideModeration(scores({ showsAnimal: 0.01 }))).toBe('pending_review')
+    })
+
     it.each([
         ['it is clearly not a pet report', { isPetReport: 0.1 }],
         ['it is clearly inappropriate', { inappropriate: 0.9 }],

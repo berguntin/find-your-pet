@@ -48,6 +48,14 @@ export class PostgresUserRepository implements UserRepository {
         return existing
     }
 
+    async displayNames(ids: string[]): Promise<Map<string, string>> {
+        if (ids.length === 0) return new Map()
+        const rows = await this.sql<{ id: string; display_name: string }[]>`
+            select id, display_name from users where id = any(${ids}::uuid[])
+        `
+        return new Map(rows.map(row => [row.id, row.display_name]))
+    }
+
     async exists(id: string): Promise<boolean> {
         const [row] = await this.sql`select 1 from users where id = ${id}`
         return row !== undefined

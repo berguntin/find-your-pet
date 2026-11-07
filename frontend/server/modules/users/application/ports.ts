@@ -9,6 +9,8 @@ export interface UserRepository {
      */
     create(user: User, identity: Pick<ExternalIdentity, 'provider' | 'subject'>): Promise<User>
     exists(id: string): Promise<boolean>
+    /** First names by user id; missing ids (deleted accounts) are left out. */
+    displayNames(ids: string[]): Promise<Map<string, string>>
     update(user: User): Promise<void>
     /** Removes the user and its identities; their reports stay, without an owner. */
     delete(id: string): Promise<void>

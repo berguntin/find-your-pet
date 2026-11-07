@@ -4,7 +4,8 @@
     const links = [
         { to: '/admin', icon: 'mdi:chart-box-outline', label: 'admin_nav_overview', exact: true },
         { to: '/admin/mascotas', icon: 'mdi:paw', label: 'admin_nav_pets', exact: false },
-        { to: '/admin/moderacion', icon: 'mdi:shield-check-outline', label: 'admin_nav_moderation', exact: false }
+        { to: '/admin/moderacion', icon: 'mdi:shield-check-outline', label: 'admin_nav_moderation', exact: false },
+        { to: '/admin/avistamientos', icon: 'mdi:eye-outline', label: 'admin_nav_sightings', exact: false }
     ]
 
     const logout = async () => {

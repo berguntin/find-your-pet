@@ -10,9 +10,13 @@ export class InMemoryModerationLog implements ModerationLog {
         this.records.push(structuredClone(record))
     }
 
+    async forgetSubmission(sightingId: string): Promise<void> {
+        for (const record of this.records) if (record.sightingId === sightingId) record.submission = null
+    }
+
     async countByDay(since: Date, timeZone: string): Promise<ModerationDayCount[]> {
         const counts = new Map<string, ModerationDayCount>()
-        for (const record of this.records.filter(r => r.decidedAt >= since)) {
+        for (const record of this.records.filter(r => r.decidedAt >= since && r.sightingId === null)) {
             const day = calendarDay(record.decidedAt, timeZone)
             const failed = record.error !== null
             const key = [day, record.source, record.decision, failed].join('|')

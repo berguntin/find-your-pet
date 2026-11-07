@@ -1,0 +1,51 @@
+/** Texts of pet sightings. */
+export const sightingsMessagesEs = {
+    sightings_title: 'Avistamientos',
+    sightings_hint:
+        'Personas que creen haber visto a este animal. Son pistas, no certezas: compruébalas antes de desplazarte.',
+    sightings_empty: 'Todavía nadie ha compartido un avistamiento.',
+    sightings_load_error: 'No hemos podido cargar los avistamientos.',
+    sightings_owner_hint:
+        'Si reconoces a tu mascota en un avistamiento, confírmalo: ayudará a otras personas a saber dónde buscar.',
+    sighting_add: 'Lo he visto',
+    sighting_login: 'Entra para compartir un avistamiento',
+    sighting_description_label: '¿Qué viste?',
+    sighting_description_placeholder: 'Cómo estaba, hacia dónde iba, si llevaba collar…',
+    sighting_area_label: 'Zona',
+    sighting_area_hint: 'Una calle, un parque o un barrio. Nunca una dirección exacta.',
+    sighting_seen_at_label: 'Cuándo',
+    sighting_photos_label: 'Fotos (opcional, hasta {max})',
+    sighting_photo_preview_alt: 'Foto {n} del avistamiento',
+    sighting_photo_remove: 'Quitar la foto {n}',
+    sighting_photo_alt: 'Foto {n} del avistamiento en {area}',
+    sighting_form_privacy:
+        'Se mostrará tu nombre de pila junto al avistamiento. No incluyas teléfonos, enlaces ni datos personales: los avistamientos con datos de contacto se revisan antes de mostrarse.',
+    sighting_submit: 'Publicar avistamiento',
+    sighting_cancel: 'Cancelar',
+    sighting_published: 'Gracias. Tu avistamiento ya está publicado.',
+    sighting_sent_to_review: 'Gracias. Revisaremos tu avistamiento antes de mostrarlo; mientras tanto solo lo ves tú.',
+    sighting_pending: 'Pendiente de revisión',
+    sighting_verified_owner: 'Confirmado por quien publicó el aviso',
+    sighting_verified_community: 'Respaldado por la comunidad',
+    sighting_progress: '{points} de {threshold} apoyos',
+    sighting_author_deleted: 'Usuario eliminado',
+    sighting_validate: 'Yo también lo he visto',
+    sighting_validate_owner: 'Es mi mascota',
+    sighting_validated: 'Lo has respaldado',
+    sighting_validate_error: 'No hemos podido registrar tu apoyo. Inténtalo de nuevo.',
+    sighting_delete: 'Borrar',
+    sighting_hide: 'Ocultar de mi aviso',
+    sighting_hide_confirm: '¿Ocultar este avistamiento? Lo revisaremos y no se mostrará mientras tanto.',
+    sighting_hide_error: 'No hemos podido ocultar el avistamiento.',
+    sightings_scam_warning:
+        'Nunca pagues ni des datos bancarios para recuperar a una mascota. Desconfía de quien pida dinero o te escriba por fuera.',
+    sighting_delete_confirm: '¿Borrar este avistamiento? No se puede deshacer.',
+    sighting_delete_error: 'No hemos podido borrar el avistamiento.',
+    sighting_error_rejected: 'Este texto no parece un avistamiento de este animal.',
+    sighting_error_rate_limited: 'Has hecho muchas acciones seguidas. Inténtalo de nuevo más tarde.',
+    sighting_error_validation:
+        'Revisa los datos: descripción de al menos 10 caracteres, zona y una fecha que no sea futura.',
+    sighting_error_unauthorized: 'Tu sesión ha caducado. Vuelve a entrar.',
+    sighting_error_closed: 'Este aviso ya está cerrado.',
+    sighting_error_generic: 'No hemos podido publicar el avistamiento. Inténtalo de nuevo.'
+}

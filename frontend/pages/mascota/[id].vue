@@ -86,6 +86,8 @@
                     <ShareButton :pet="pet" :only-icon="false" class-name="btn-outline btn-primary" />
                     <span class="text-sm text-muted">{{ $t('share_hint') }}</span>
                 </div>
+
+                <PetSightings :pet-id="pet.id" :open="isOpen" />
             </section>
         </div>
 
