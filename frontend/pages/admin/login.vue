@@ -3,8 +3,8 @@
     useHead({ title: 'Admin', meta: [{ name: 'robots', content: 'noindex, nofollow' }] })
 
     const route = useRoute()
-    const { loggedIn } = useUserSession()
-    if (loggedIn.value) await navigateTo('/admin')
+    const { user } = useUserSession()
+    if (user.value?.admin) await navigateTo('/admin')
 
     const error = computed(() => {
         if (route.query.error === 'forbidden') return 'admin_login_forbidden'
@@ -26,7 +26,7 @@
                 <span>{{ $t(error) }}</span>
             </div>
             <!-- A full page load: the OAuth flow leaves the app. -->
-            <a href="/auth/google" class="btn btn-primary w-full">
+            <a :href="loginUrl('/admin')" class="btn btn-primary w-full">
                 <Icon name="mdi:google" size="1.25rem" />
                 {{ $t('admin_login_google') }}
             </a>

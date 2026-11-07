@@ -5,7 +5,7 @@ import { defineApiHandler, getActor, parseWith } from '../../../shared/infrastru
 
 /** New lost and found pets per day, reunions and totals, for the last `days`. Admin only. */
 export default defineApiHandler(async event => {
-    const { pets, adminAccess } = useContainer()
+    const { pets, access } = useContainer()
     const { days } = parseWith(adminStatsQuerySchema, getQuery(event))
-    return pets.stats.execute(days, await getActor(event, adminAccess))
+    return pets.stats.execute(days, await getActor(event, access))
 })

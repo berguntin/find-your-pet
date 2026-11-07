@@ -41,38 +41,52 @@ serve them as routes.
 
 ## API
 
-| Method | Path | Notes |
-|---|---|---|
-| GET | `/api/v1/pets` | Approved pets only. Filters `reportType`, `species`, `resolution`; cursor pagination (`cursor`, `limit`). With `q`: keyword hits first, then semantic matches ("perro negro" finds black dogs), unpaginated |
-| POST | `/api/v1/pets` | Report a pet. Images must be Cloudinary URLs uploaded through the app. Moderated automatically: `422 content_rejected`, or stored as `pending_review` (hidden) or `approved`. Rate limited |
-| GET | `/api/v1/pets/:id` | Pending pets return 404 except to admins |
-| PATCH | `/api/v1/pets/:id` | `{ "resolution": "reunited" }`. Admin only for now |
-| DELETE | `/api/v1/pets/:id` | Admin only for now |
-| POST | `/api/v1/pets/describe` | Pre-fills the form from a photo (OpenAI). Rate limited |
-| POST | `/api/v1/pets/search-by-image` | `{ image: dataUrl }` → published, open pets that look alike, with a calibrated `match` (0–100). The photo is not stored. `503` without Gemini. Rate limited |
-| POST | `/api/v1/uploads/signature` | Signed parameters to upload an image straight to Cloudinary. Rate limited |
-| GET | `/api/v1/admin/pets` | Admin. Reports by `moderationStatus` (`pending_review` by default, `all` for every pet), with moderation scores |
-| GET | `/api/v1/admin/pets/:id` | Admin. Any pet with its moderation scores |
-| PATCH | `/api/v1/admin/pets/:id` | Admin. Any reported detail, the photos (removed ones are deleted) and `resolution` (`open`/`reunited`) |
-| PATCH | `/api/v1/admin/pets/:id/moderation` | Admin. `{ "status": "approved" }` publishes; `"pending_review"` hides a published pet; `"rejected"` deletes the report and its images |
-| GET | `/api/v1/admin/stats?days=30` | Admin. New lost/found pets and reunions per day (Europe/Madrid days) vs the previous period, and totals. `days`: 7, 30 or 90 |
-| GET | `/api/v1/admin/moderation?days=30` | Admin. Moderator setup and thresholds, automatic and admin decisions per day, latency, latest decisions |
-| * | `/api/internal/outbox/process` | Internal token. Delivers pending domain events |
-| * | `/api/internal/search/backfill` | Internal token. Indexes published pets missing from search |
-| * | `/api/internal/images/cleanup` | Internal token. Deletes uploads older than a day that no pet uses |
+| Method | Path                                | Notes                                                                                                                                                                                                       |
+| ------ | ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/api/v1/pets`                      | Approved pets only. Filters `reportType`, `species`, `resolution`; cursor pagination (`cursor`, `limit`). With `q`: keyword hits first, then semantic matches ("perro negro" finds black dogs), unpaginated |
+| POST   | `/api/v1/pets`                      | Report a pet. Images must be Cloudinary URLs uploaded through the app. Moderated automatically: `422 content_rejected`, or stored as `pending_review` (hidden) or `approved`. Rate limited                  |
+| GET    | `/api/v1/pets/:id`                  | Pending pets return 404 except to admins and their owner                                                                                                                                                    |
+| PATCH  | `/api/v1/pets/:id`                  | `{ "resolution": "reunited" }`. The pet's owner (signed-in user who reported it) or an admin                                                                                                                |
+| DELETE | `/api/v1/pets/:id`                  | The pet's owner or an admin                                                                                                                                                                                 |
+| GET    | `/api/v1/me`                        | Signed-in user: `{ id, name }` (first name only). `401` without a session                                                                                                                                   |
+| DELETE | `/api/v1/me`                        | `{ "deletePets"?: boolean }`. Deletes the signed-in user's account (and, if asked, every pet they reported, with its images) and signs out. Otherwise their pets stay, without an owner. Rate limited       |
+| POST   | `/api/v1/pets/describe`             | Pre-fills the form from a photo (OpenAI). Rate limited                                                                                                                                                      |
+| POST   | `/api/v1/pets/search-by-image`      | `{ image: dataUrl }` → published, open pets that look alike, with a calibrated `match` (0–100). The photo is not stored. `503` without Gemini. Rate limited                                                 |
+| POST   | `/api/v1/uploads/signature`         | Signed parameters to upload an image straight to Cloudinary. Rate limited                                                                                                                                   |
+| GET    | `/api/v1/admin/pets`                | Admin. Reports by `moderationStatus` (`pending_review` by default, `all` for every pet), with moderation scores                                                                                             |
+| GET    | `/api/v1/admin/pets/:id`            | Admin. Any pet with its moderation scores                                                                                                                                                                   |
+| PATCH  | `/api/v1/admin/pets/:id`            | Admin. Any reported detail, the photos (removed ones are deleted) and `resolution` (`open`/`reunited`)                                                                                                      |
+| PATCH  | `/api/v1/admin/pets/:id/moderation` | Admin. `{ "status": "approved" }` publishes; `"pending_review"` hides a published pet; `"rejected"` deletes the report and its images                                                                       |
+| GET    | `/api/v1/admin/stats?days=30`       | Admin. New lost/found pets and reunions per day (Europe/Madrid days) vs the previous period, and totals. `days`: 7, 30 or 90                                                                                |
+| GET    | `/api/v1/admin/moderation?days=30`  | Admin. Moderator setup and thresholds, automatic and admin decisions per day, latency, latest decisions                                                                                                     |
+| \*     | `/api/internal/outbox/process`      | Internal token. Delivers pending domain events                                                                                                                                                              |
+| \*     | `/api/internal/search/backfill`     | Internal token. Indexes published pets missing from search                                                                                                                                                  |
+| \*     | `/api/internal/images/cleanup`      | Internal token. Deletes uploads older than a day that no pet uses                                                                                                                                           |
 
 Errors always look like `{ "error": { "code", "message", "details" } }`; `429` responses include `Retry-After`.
-Admin actions accept the admin panel session or `Authorization: Bearer $NUXT_ADMIN_TOKEN` (scripts); internal
+Admin actions accept an admin's Google session or `Authorization: Bearer $NUXT_ADMIN_TOKEN` (scripts); internal
 endpoints use `$NUXT_INTERNAL_TOKEN` (or Vercel's `CRON_SECRET`).
+
+## User accounts
+
+Anyone can sign in with Google (`/entrar`, or `/auth/google?returnTo=<path>`); it is optional for reporting a pet.
+
+- The first sign-in creates a row in `users` (first name only) linked to the Google account in
+  `auth_identities` (by `sub`). The email and photo only live in the sealed session cookie.
+- Every request with a session checks that the account still exists, so a cookie left on another device
+  after deleting the account behaves as anonymous.
+- Pets reported while signed in get an `owner_id`, so their owner can mark them reunited or delete them.
+- `DELETE /api/v1/me` deletes the account; its pets are deleted too if asked, otherwise they stay public without an owner.
+- Same Google OAuth client and session variables as the admin panel (below).
 
 ## Admin panel
 
 `/admin` (Spanish only): overview with new lost/found pets per day and trends, every pet with full editing
 (details, photos, resolution, publish/hide/reject, delete) and the automatic moderator's setup and decisions.
 
-- Sign-in with Google through `nuxt-auth-utils` (sealed session cookie). Only verified emails listed in
-  `NUXT_ADMIN_EMAILS` get in, and the list is checked again on every admin request.
-- Needs `NUXT_OAUTH_GOOGLE_CLIENT_ID`, `NUXT_OAUTH_GOOGLE_CLIENT_SECRET` (a *Web application* OAuth client with
+- Sign-in with Google through `nuxt-auth-utils` (sealed session cookie), shared with user accounts. Only
+  verified emails listed in `NUXT_ADMIN_EMAILS` get in, and the list is checked again on every admin request.
+- Needs `NUXT_OAUTH_GOOGLE_CLIENT_ID`, `NUXT_OAUTH_GOOGLE_CLIENT_SECRET` (a _Web application_ OAuth client with
   `<base url>/auth/google` as redirect URI) and `NUXT_SESSION_PASSWORD` (32+ characters).
 - Every moderation decision (automatic or by an admin) is stored in `moderation_decisions`, including rejected
   reports' text (without contact details or photos) so false rejections can be audited.
@@ -115,15 +129,15 @@ Without Docker, from `frontend/`: start a Postgres, set `NUXT_DATABASE_URL`, the
 
 ## Scripts (in `frontend/`)
 
-| Script | |
-|---|---|
-| `npm run dev` / `build` | Nuxt dev server / production build |
-| `npm test` | Unit, HTTP and composable tests; Postgres integration tests also run when `TEST_DATABASE_URL` points to a migrated, disposable database |
-| `npm run test:coverage` | Same, with coverage. Thresholds (90% lines, 85% branches) apply when `TEST_DATABASE_URL` is set, as in CI |
-| `npm run lint` / `typecheck` | ESLint (including layer boundaries) / vue-tsc |
-| `npm run db:migrate` / `db:rollback` / `db:new <name>` | dbmate migrations in `server/db/migrations` |
-| `npm run eval:embeddings -- <dir>` | Measures the embedding model on labelled photos and suggests the match calibration |
-| `npm run reindex:search` | Re-embeds the photos and text of every published pet (after changing the embedding model) |
+| Script                                                 |                                                                                                                                         |
+| ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run dev` / `build`                                | Nuxt dev server / production build                                                                                                      |
+| `npm test`                                             | Unit, HTTP and composable tests; Postgres integration tests also run when `TEST_DATABASE_URL` points to a migrated, disposable database |
+| `npm run test:coverage`                                | Same, with coverage. Thresholds (90% lines, 85% branches) apply when `TEST_DATABASE_URL` is set, as in CI                               |
+| `npm run lint` / `typecheck`                           | ESLint (including layer boundaries) / vue-tsc                                                                                           |
+| `npm run db:migrate` / `db:rollback` / `db:new <name>` | dbmate migrations in `server/db/migrations`                                                                                             |
+| `npm run eval:embeddings -- <dir>`                     | Measures the embedding model on labelled photos and suggests the match calibration                                                      |
+| `npm run reindex:search`                               | Re-embeds the photos and text of every published pet (after changing the embedding model)                                               |
 
 ## Deployment (Vercel)
 

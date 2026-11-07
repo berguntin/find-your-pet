@@ -61,7 +61,7 @@ export default defineNuxtConfig({
         adminToken: '',
         adminEmails: '',
         internalToken: '',
-        // Admin panel session (nuxt-auth-utils): sealed cookie with NUXT_SESSION_PASSWORD, valid for a week.
+        // Google sign-in session (nuxt-auth-utils): sealed cookie with NUXT_SESSION_PASSWORD, valid for a week.
         session: {
             password: '',
             maxAge: 60 * 60 * 24 * 7

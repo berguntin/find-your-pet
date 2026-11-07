@@ -1,4 +1,4 @@
-import type { Actor } from '../../../shared/domain/actor'
+import { actorUserId, type Actor } from '../../../shared/domain/actor'
 import type { Clock, IdGenerator, Page } from '../../../shared/application/ports'
 import { ContentRejectedError, ForbiddenError, NotFoundError, ValidationError } from '../../../shared/domain/errors'
 import {
@@ -50,7 +50,7 @@ export class ReportPet {
         const pet = Pet.report(data, {
             id: this.ids.next(),
             now: this.clock.now(),
-            ownerId: actor.kind === 'user' ? actor.userId : null
+            ownerId: actorUserId(actor)
         })
 
         const startedAt = this.clock.now()
@@ -206,6 +206,21 @@ export class DeletePet {
         const pet = await findPet(this.pets, id)
         pet.assertCanBeManagedBy(actor)
         await deleteWithImages(pet, this.pets, this.images, this.reportError)
+    }
+}
+
+/** Deletes every pet a user reported, with its images: used when they delete their account and ask for it. */
+export class DeletePetsOfOwner {
+    constructor(
+        private readonly pets: PetRepository,
+        private readonly images: ImageStorage,
+        private readonly reportError: ErrorReporter
+    ) {}
+
+    async execute(ownerId: string): Promise<number> {
+        const pets = await this.pets.findByIds(await this.pets.findIdsByOwner(ownerId))
+        for (const pet of pets) await deleteWithImages(pet, this.pets, this.images, this.reportError)
+        return pets.length
     }
 }
 

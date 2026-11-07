@@ -7,8 +7,8 @@ import { defineApiHandler, getActor } from '../../../../shared/infrastructure/ht
 
 /** Any pet, published or not, with its moderation details. Admin only. */
 export default defineApiHandler(async event => {
-    const { pets, adminAccess } = useContainer()
-    const actor = await getActor(event, adminAccess)
+    const { pets, access } = useContainer()
+    const actor = await getActor(event, access)
     if (actor.kind !== 'admin') throw new ForbiddenError()
     const id = petIdSchema.safeParse(getRouterParam(event, 'id'))
     if (!id.success) throw new NotFoundError('Pet not found')

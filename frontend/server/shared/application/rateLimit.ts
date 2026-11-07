@@ -22,5 +22,6 @@ export const RATE_LIMITS = {
     searchByImage: { name: 'search-by-image', limit: 20, windowSeconds: 10 * 60 },
     // Typing in the search box triggers it (debounced), so it is generous; over it, keywords only.
     semanticSearch: { name: 'semantic-search', limit: 60, windowSeconds: 10 * 60 },
-    uploadSignature: { name: 'upload-signature', limit: 60, windowSeconds: 60 * 60 }
+    uploadSignature: { name: 'upload-signature', limit: 60, windowSeconds: 60 * 60 },
+    deleteAccount: { name: 'delete-account', limit: 5, windowSeconds: 60 * 60 }
 } as const satisfies Record<string, RateLimitPolicy>

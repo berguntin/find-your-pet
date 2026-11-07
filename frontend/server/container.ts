@@ -4,13 +4,14 @@
  */
 import { randomUUID } from 'node:crypto'
 import { consola } from 'consola'
+import { getCookie } from 'h3'
 import { useRuntimeConfig } from '#imports'
 import { EventHandlerRegistry, ProcessOutbox } from './shared/application/outbox'
 import type { RateLimiter } from './shared/application/rateLimit'
 import { parseServerConfig, withRawSecrets, type ServerConfig } from './shared/infrastructure/config'
 import { runInBackground } from './shared/infrastructure/background'
 import { createDatabase } from './shared/infrastructure/database'
-import type { AdminAccess } from './shared/infrastructure/http'
+import type { ActorAccess } from './shared/infrastructure/http'
 import { PostgresOutboxStore } from './shared/infrastructure/PostgresOutboxStore'
 import { NoopRateLimiter, UpstashRateLimiter } from './shared/infrastructure/rateLimiters'
 import { GoogleGenAI } from '@google/genai'
@@ -29,13 +30,16 @@ import {
 import { PostgresModerationLog } from './modules/pets/infrastructure/PostgresModerationLog'
 import { PostgresPetEmbeddingIndex } from './modules/pets/infrastructure/PostgresPetEmbeddingIndex'
 import { PostgresPetRepository } from './modules/pets/infrastructure/PostgresPetRepository'
+import { createUsersModule, type UsersModule } from './modules/users'
+import { PostgresUserRepository } from './modules/users/infrastructure/PostgresUserRepository'
 
 export interface Container {
     config: Pick<ServerConfig, 'internalToken' | 'cronSecret'>
-    adminAccess: AdminAccess
+    access: ActorAccess
     rateLimiter: RateLimiter
     processOutbox: ProcessOutbox
     pets: PetsModule
+    users: UsersModule
 }
 
 function buildContainer(): Container {
@@ -58,6 +62,7 @@ function buildContainer(): Container {
     if (!config.gemini.apiKey)
         consola.warn('NUXT_GEMINI_API_KEY is not set: image search is off and text search uses keywords only')
 
+    const userRepository = new PostgresUserRepository(sql)
     const pets = createPetsModule({
         pets: new PostgresPetRepository(sql),
         images: new CloudinaryImageStorage(config.cloudinary, clock),
@@ -91,18 +96,28 @@ function buildContainer(): Container {
 
     return {
         config,
-        adminAccess: {
+        access: {
             adminToken: config.adminToken,
             adminEmails: config.adminEmails,
             // getUserSession is a Nitro auto-import from nuxt-auth-utils (not exposed through #imports).
-            sessionEmail: async event => (await getUserSession(event)).user?.email ?? null
+            session: async event => {
+                // Reading the session creates an (empty) cookie: skip it for visitors who never signed in.
+                if (!getCookie(event, 'nuxt-session')) return null
+                const { user } = await getUserSession(event)
+                return user ? { email: user.email, userId: user.id ?? null } : null
+            },
+            endSession: async event => {
+                await clearUserSession(event)
+            },
+            userExists: id => userRepository.exists(id)
         },
         rateLimiter:
             config.upstash.url && config.upstash.token
                 ? new UpstashRateLimiter({ url: config.upstash.url, token: config.upstash.token })
                 : new NoopRateLimiter(),
         processOutbox: new ProcessOutbox(new PostgresOutboxStore(sql), eventHandlers, clock),
-        pets
+        pets,
+        users: createUsersModule({ users: userRepository, clock, ids: { next: () => randomUUID() } })
     }
 }
 

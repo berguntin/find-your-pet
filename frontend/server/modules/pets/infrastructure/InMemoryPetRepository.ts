@@ -15,6 +15,10 @@ export class InMemoryPetRepository implements PetRepository {
         this.outbox.append(pet.pullEvents())
     }
 
+    async findIdsByOwner(ownerId: string): Promise<string[]> {
+        return [...this.pets.values()].filter(pet => pet.toSnapshot().ownerId === ownerId).map(pet => pet.id)
+    }
+
     async listAllImageUrls(): Promise<string[]> {
         return [...this.pets.values()].flatMap(pet => pet.toSnapshot().images)
     }

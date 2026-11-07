@@ -1,4 +1,6 @@
 import { adminMessagesEs } from './features/admin/locales/es'
+import { authMessagesEn } from './features/auth/locales/en'
+import { authMessagesEs } from './features/auth/locales/es'
 
 export default defineI18nConfig(() => ({
     legacy: false,
@@ -8,6 +10,7 @@ export default defineI18nConfig(() => ({
     messages: {
         es: {
             ...adminMessagesEs,
+            ...authMessagesEs,
             app_name: 'Mascotas Encontradas',
             skip_to_content: 'Saltar al contenido',
             main_navigation: 'Navegación principal',
@@ -148,6 +151,7 @@ export default defineI18nConfig(() => ({
             footer: 'Todos los derechos reservados.'
         },
         en: {
+            ...authMessagesEn,
             app_name: 'Mascotas Encontradas',
             skip_to_content: 'Skip to content',
             main_navigation: 'Main navigation',

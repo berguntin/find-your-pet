@@ -17,6 +17,7 @@ Para el correcto funcionamiento del Sitio, podemos recopilar los siguientes dato
 
 -   **Datos personales proporcionados por el usuario:** Esto incluye información como nombre, correo electrónico, número de teléfono y descripción de la mascota, que el usuario elige voluntariamente compartir al publicar un anuncio.
 -   **Contenido de las publicaciones:** Fotografías, descripciones y cualquier otra información relacionada con la mascota que los usuarios suban al Sitio.
+-   **Cuenta de usuario (opcional):** si decides entrar con Google, guardamos el identificador de tu cuenta de Google y tu nombre de pila. No guardamos tu email ni tu foto en nuestra base de datos. No es necesario entrar para publicar un aviso.
 
 ## 3. Uso de la información
 
@@ -24,6 +25,7 @@ La información recopilada se utiliza exclusivamente para:
 
 -   Publicar anuncios sobre mascotas perdidas o encontradas.
 -   Facilitar el contacto entre personas interesadas en resolver situaciones relacionadas con mascotas perdidas.
+-   Si tienes cuenta: identificarte al entrar y permitirte gestionar (marcar como resueltos o borrar) los avisos que publiques con la sesión iniciada. La base legal es tu consentimiento, que retiras borrando la cuenta. La cuenta se conserva hasta que la borres.
 
 ## 4. Responsable del tratamiento
 
@@ -37,9 +39,15 @@ Nos comprometemos a proteger los datos personales de los usuarios mediante medid
 
 La información publicada en el Sitio será accesible públicamente para cumplir con su propósito. Sin embargo, no compartiremos datos personales con terceros fuera de este contexto sin el consentimiento del usuario.
 
+Para iniciar sesión usamos Google como proveedor de identidad: al entrar, Google nos confirma tu identidad y nos envía tu identificador, email, nombre y foto de perfil. El email (para comprobar si eres administrador) y la dirección de la foto (para mostrarla en tu propio menú) solo viajan dentro de la cookie de sesión cifrada de tu navegador; la foto la carga tu navegador directamente desde Google.
+
 ## 7. Uso de cookies
 
-Este Sitio no utiliza cookies ni tecnologías de seguimiento para recopilar información de los usuarios.
+Este Sitio no utiliza cookies de seguimiento ni de publicidad. Solo usa cookies técnicas, necesarias para su funcionamiento:
+
+-   `nuxt-session`: cookie de sesión cifrada que te mantiene identificado durante un máximo de 7 días después de entrar. Si no has iniciado sesión puede crearse igualmente, pero vacía, sin ningún dato tuyo.
+-   `auth_return_to`: cookie temporal (10 minutos) que recuerda a qué página volver tras entrar con Google.
+-   `i18n_redirected`: recuerda el idioma en que ves el Sitio.
 
 ## 8. Derechos de los usuarios
 
@@ -47,6 +55,8 @@ Los usuarios tienen derecho a:
 
 -   Acceder, rectificar o eliminar los datos personales proporcionados.
 -   Retirar su consentimiento para el uso de sus datos en cualquier momento.
+
+Si tienes cuenta, puedes borrarla en cualquier momento desde tu menú de usuario ("Borrar mi cuenta"): se elimina al momento. En ese mismo paso puedes pedir que se borren también todos los avisos que publicaste con la sesión iniciada, con sus fotos; si no lo pides, seguirán visibles sin estar asociados a ti.
 
 Para ejercer estos derechos, los usuarios pueden ponerse en contacto con nosotros en [email de contacto].
 
