@@ -21,6 +21,18 @@ describe('OpenAIPetDescriber', () => {
         expect(request.messages[0].content).toContainEqual({ type: 'image_url', image_url: { url: IMAGE } })
     })
 
+    it('asks for the likely breed at the start of the description', async () => {
+        const { describer, create } = describerAnswering('{"isPet": false}')
+
+        await describer.describe(IMAGE)
+
+        const prompt = create.mock.calls[0]![0].messages[0].content.find(
+            (part: { type: string }) => part.type === 'text'
+        ).text
+        expect(prompt).toMatch(/ALWAYS start with the most likely breed/)
+        expect(prompt).toMatch(/Cruce de/)
+    })
+
     it('maps a pet description, trimming text and turning blanks into null', async () => {
         const { describer } = describerAnswering(
             JSON.stringify({

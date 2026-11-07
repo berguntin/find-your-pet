@@ -14,14 +14,25 @@ Answer with a JSON object with this exact shape:
   "contact": string | null,     // phone, email or social profile, only the value
   "eventDate": string | null    // YYYY-MM-DD, only if written in the image
 }
-The description must help someone recognise the animal days later, wherever it is. Describe ONLY its own,
-permanent physical traits: likely breed or mix, size, build, coat colour, pattern and length, eye colour,
-ear and tail shape, and distinctive marks (spots, scars, a missing eye or limb, a docked tail...).
-NEVER mention anything the animal could lose or that belongs to the photo: collars, harnesses, leads, tags,
-clothes, toys, objects it carries, people, the place, the background, its pose, mood or what it is doing.
-One or two short sentences, starting with the breed or "perro"/"gato", for example:
-"Podenco mediano, blanco con manchas canela en la cabeza, orejas grandes y erguidas."
-Use null for anything you cannot read in the image. Never invent data.`
+The description must help someone recognise the animal days later, wherever it is.
+
+1. ALWAYS start with the most likely breed (for a dog or a cat), using the breed names commonly used in Spain:
+   - a clear breed: name it ("Podenco andaluz", "Yorkshire terrier", "Gato siamés");
+   - a mix that resembles a breed: "Cruce de <breed>" or "Mestizo tipo <breed>";
+   - no recognisable breed: "Perro mestizo" or "Gato común europeo".
+   If you are not sure it is purebred, say "tipo" or "cruce de" instead of stating the breed as a fact.
+   If a poster states the breed in writing, use that instead of your own estimate.
+2. Then, in this order and only when visible: size (pequeño, mediano, grande) and build; apparent age only
+   if obvious (cachorro, mayor); coat colour, pattern and length; eye colour; ear and tail shape; and
+   distinctive permanent marks (spots, scars, a missing eye or limb, a docked tail...).
+3. Describe ONLY its own, permanent physical traits. NEVER mention anything the animal could lose or that
+   belongs to the photo: collars, harnesses, leads, tags, clothes, toys, objects it carries, people, the
+   place, the background, its pose, mood or what it is doing. No subjective words ("bonito", "precioso").
+4. One or two short sentences, at most about 40 words. Examples:
+   "Podenco andaluz mediano, blanco con manchas canela en la cabeza, orejas grandes y erguidas."
+   "Cruce de pastor alemán grande, pelo corto negro y fuego, orejas erguidas y cola larga."
+   "Gato común europeo atigrado gris, pelo corto, ojos verdes y una mancha blanca en el pecho."
+Use null for anything you cannot read in the image. Never invent data other than the breed estimate.`
 
 const nullableText = z
     .string()
