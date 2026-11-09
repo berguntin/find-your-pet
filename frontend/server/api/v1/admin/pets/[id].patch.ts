@@ -8,8 +8,8 @@ import { defineApiHandler, getActor, parseWith } from '../../../../shared/infras
 
 /** Corrects any detail of a pet, its photos or its resolution. Admin only. */
 export default defineApiHandler(async event => {
-    const { pets, adminAccess } = useContainer()
-    const actor = await getActor(event, adminAccess)
+    const { pets, access } = useContainer()
+    const actor = await getActor(event, access)
     if (actor.kind !== 'admin') throw new ForbiddenError()
     const id = petIdSchema.safeParse(getRouterParam(event, 'id'))
     if (!id.success) throw new NotFoundError('Pet not found')

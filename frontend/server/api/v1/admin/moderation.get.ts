@@ -6,7 +6,7 @@ import { defineApiHandler, getActor, parseWith } from '../../../shared/infrastru
 
 /** Automatic moderator setup, its decisions for the last `days` and the latest decisions. Admin only. */
 export default defineApiHandler(async event => {
-    const { pets, adminAccess } = useContainer()
+    const { pets, access } = useContainer()
     const { days } = parseWith(adminStatsQuerySchema, getQuery(event))
-    return toModerationOverviewDto(await pets.moderationOverview.execute(days, await getActor(event, adminAccess)))
+    return toModerationOverviewDto(await pets.moderationOverview.execute(days, await getActor(event, access)))
 })

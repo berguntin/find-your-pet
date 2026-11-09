@@ -22,6 +22,8 @@ export interface PetRepository {
     findByIds(ids: string[]): Promise<Pet[]>
     delete(id: string): Promise<void>
     search(criteria: PetSearchCriteria): Promise<Page<Pet>>
+    /** Ids of the pets reported by a user, for deleting them with the account. */
+    findIdsByOwner(ownerId: string): Promise<string[]>
     /** Every image URL used by any pet, to find orphan uploads. */
     listAllImageUrls(): Promise<string[]>
     /** Pets reported and reunited since `since`, per calendar day in `timeZone` (YYYY-MM-DD). */

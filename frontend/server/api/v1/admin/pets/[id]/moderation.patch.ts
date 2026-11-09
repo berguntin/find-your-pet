@@ -8,12 +8,12 @@ import { defineApiHandler, getActor, parseWith } from '../../../../../shared/inf
 
 /** Publishes a report, hides a published one back to review, or rejects it (deleting it and its images). Admin only. */
 export default defineApiHandler(async event => {
-    const { pets, adminAccess } = useContainer()
+    const { pets, access } = useContainer()
     const id = petIdSchema.safeParse(getRouterParam(event, 'id'))
     if (!id.success) throw new NotFoundError('Pet not found')
     const { status } = parseWith(moderatePetSchema, await readBody(event))
 
-    const pet = await pets.moderate.execute(id.data, status, await getActor(event, adminAccess))
+    const pet = await pets.moderate.execute(id.data, status, await getActor(event, access))
     if (!pet) {
         setResponseStatus(event, 204)
         return null

@@ -7,12 +7,12 @@ import { defineApiHandler, getActor, parseWith } from '../../../shared/infrastru
 
 /** For now the only allowed change is marking the pet as reunited with its family. */
 export default defineApiHandler(async event => {
-    const { pets, adminAccess } = useContainer()
+    const { pets, access } = useContainer()
     const id = petIdSchema.safeParse(getRouterParam(event, 'id'))
     if (!id.success) throw new NotFoundError('Pet not found')
     parseWith(updatePetSchema, await readBody(event))
 
-    const pet = await pets.markAsReunited.execute(id.data, await getActor(event, adminAccess))
+    const pet = await pets.markAsReunited.execute(id.data, await getActor(event, access))
     processOutboxInBackground()
     return toPetDto(pet)
 })

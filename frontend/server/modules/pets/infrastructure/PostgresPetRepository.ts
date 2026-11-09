@@ -91,6 +91,11 @@ export class PostgresPetRepository implements PetRepository {
         `
     }
 
+    async findIdsByOwner(ownerId: string): Promise<string[]> {
+        const rows = await this.sql<{ id: string }[]>`select id from pets where owner_id = ${ownerId}`
+        return rows.map(row => row.id)
+    }
+
     async listAllImageUrls(): Promise<string[]> {
         const rows = await this.sql<{ url: string }[]>`select distinct unnest(images) as url from pets`
         return rows.map(row => row.url)

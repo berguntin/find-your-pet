@@ -18,12 +18,14 @@
                     <Icon name="mdi:plus" size="1.1rem" />
                     {{ $t('publish_report') }}
                 </NuxtLink>
+                <UserMenu />
             </nav>
 
             <div class="flex items-center gap-1 md:hidden">
                 <NuxtLink to="/registrar" class="btn btn-primary btn-sm btn-circle" :aria-label="$t('publish_report')">
                     <Icon name="mdi:plus" size="1.25rem" />
                 </NuxtLink>
+                <UserMenu />
                 <button
                     type="button"
                     class="btn btn-ghost btn-sm btn-circle"

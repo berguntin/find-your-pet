@@ -51,22 +51,43 @@ export function parseWith<Output, Input>(schema: ZodType<Output, ZodTypeDef, Inp
     return result.data
 }
 
-/** How a request proves it comes from an admin: a bearer token (scripts) or a panel session. */
-export interface AdminAccess {
+/** Who is signed in through the session cookie, as far as the HTTP layer needs to know. */
+export interface SessionIdentity {
+    email: string
+    /** Missing in sessions created before user accounts existed. */
+    userId: string | null
+}
+
+/** How a request proves who it comes from: an admin bearer token (scripts) or a Google session. */
+export interface ActorAccess {
     adminToken: string | undefined
     adminEmails: string[]
-    /** Email of the signed-in Google account, if any. */
-    sessionEmail(event: H3Event): Promise<string | null>
+    session(event: H3Event): Promise<SessionIdentity | null>
+    /** Signs the browser out (clears the session cookie). */
+    endSession(event: H3Event): Promise<void>
+    /** Sealed cookies outlive deleted accounts (other devices), so the account is checked on every request. */
+    userExists(userId: string): Promise<boolean>
 }
 
 /**
- * The only privileged actor so far is an admin: `Authorization: Bearer <token>`, or a panel session whose
- * email is still on the allowlist (checked on every request, so removing an email revokes access at once).
+ * Admins: `Authorization: Bearer <token>`, or a session whose email is still on the allowlist (checked on
+ * every request, so removing an email revokes access at once). Any other session is a regular user.
  */
-export async function getActor(event: H3Event, access: AdminAccess): Promise<Actor> {
+export async function getActor(event: H3Event, access: ActorAccess): Promise<Actor> {
     if (access.adminToken && hasBearerToken(event, access.adminToken)) return { kind: 'admin' }
-    if (isAdminEmail(await access.sessionEmail(event), access.adminEmails)) return { kind: 'admin' }
+    const session = await access.session(event)
+    const userId = session?.userId && (await access.userExists(session.userId)) ? session.userId : undefined
+    if (session && isAdminEmail(session.email, access.adminEmails))
+        return userId ? { kind: 'admin', userId } : { kind: 'admin' }
+    if (userId) return { kind: 'user', userId }
     return { kind: 'anonymous' }
+}
+
+/** The signed-in user, or 401: for actions that need an account (admins with a session count too). */
+export async function requireUserId(event: H3Event, access: ActorAccess): Promise<string> {
+    const actor = await getActor(event, access)
+    if (actor.kind === 'anonymous' || !actor.userId) throw new UnauthorizedError()
+    return actor.userId
 }
 
 /** Guards internal endpoints (outbox processing, cleanups) called by schedulers. */

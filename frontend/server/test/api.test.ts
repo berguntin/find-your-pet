@@ -8,6 +8,7 @@ import { createApp, createRouter, toWebHandler } from 'h3'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AdminPetDto, AdminPetPageDto, ModerationOverviewDto, PetStatsDto } from '../../contracts/admin'
 import type { ApiErrorDto, PetDto, PetMatchListDto, PetPageDto, ReportPetRequest } from '../../contracts/pets'
+import type { MeDto } from '../../contracts/users'
 import type { Container } from '../container'
 import { createPetsModule } from '../modules/pets'
 import { petSearchText } from '../modules/pets/application/search'
@@ -18,8 +19,11 @@ import { InMemoryModerationLog } from '../modules/pets/infrastructure/InMemoryMo
 import { InMemoryImageStorage } from '../modules/pets/infrastructure/InMemoryImageStorage'
 import { InMemoryPetEmbeddingIndex } from '../modules/pets/infrastructure/InMemoryPetEmbeddingIndex'
 import { InMemoryPetRepository } from '../modules/pets/infrastructure/InMemoryPetRepository'
+import { createUsersModule } from '../modules/users'
+import { InMemoryUserRepository } from '../modules/users/infrastructure/InMemoryUserRepository'
 import { EventHandlerRegistry, ProcessOutbox } from '../shared/application/outbox'
 import type { RateLimiter } from '../shared/application/rateLimit'
+import type { SessionIdentity } from '../shared/infrastructure/http'
 
 let container: Container
 const processOutboxInBackground = vi.fn()
@@ -29,6 +33,8 @@ vi.mock('consola', () => ({ consola: { error: vi.fn() } }))
 
 const { default: listPets } = await import('../api/v1/pets/index.get')
 const { default: reportPet } = await import('../api/v1/pets/index.post')
+const { default: getMe } = await import('../api/v1/me/index.get')
+const { default: deleteMe } = await import('../api/v1/me/index.delete')
 const { default: getPet } = await import('../api/v1/pets/[id].get')
 const { default: updatePet } = await import('../api/v1/pets/[id].patch')
 const { default: deletePet } = await import('../api/v1/pets/[id].delete')
@@ -53,6 +59,8 @@ const router = createRouter()
     .get('/api/v1/pets/:id', getPet)
     .patch('/api/v1/pets/:id', updatePet)
     .delete('/api/v1/pets/:id', deletePet)
+    .get('/api/v1/me', getMe)
+    .delete('/api/v1/me', deleteMe)
     .post('/api/v1/uploads/signature', signUpload)
     .get('/api/v1/admin/pets', adminListPets)
     .get('/api/v1/admin/pets/:id', adminGetPet)
@@ -113,7 +121,10 @@ async function createPet(overrides: Partial<ReportPetRequest> = {}): Promise<Pet
 let describer: { describe: ReturnType<typeof vi.fn<PetDescriber['describe']>> }
 let moderator: { model: string | null; review: ReturnType<typeof vi.fn<ContentModerator['review']>> }
 let moderationLog: InMemoryModerationLog
-let sessionEmail: string | null
+let session: SessionIdentity | null
+let endSession: ReturnType<typeof vi.fn>
+let userRepository: InMemoryUserRepository
+let users: Container['users']
 let rateLimiter: { consume: ReturnType<typeof vi.fn<RateLimiter['consume']>> }
 let repository: InMemoryPetRepository
 let images: InMemoryImageStorage
@@ -127,7 +138,15 @@ beforeEach(() => {
     describer = { describe: vi.fn<PetDescriber['describe']>().mockResolvedValue(null) }
     moderator = { model: 'test-moderator', review: vi.fn<ContentModerator['review']>().mockResolvedValue(APPROVE) }
     moderationLog = new InMemoryModerationLog()
-    sessionEmail = null
+    session = null
+    endSession = vi.fn()
+    userRepository = new InMemoryUserRepository()
+    let userCounter = 0
+    users = createUsersModule({
+        users: userRepository,
+        clock,
+        ids: { next: () => `00000000-0000-4000-a000-${String(++userCounter).padStart(12, '0')}` }
+    })
     rateLimiter = {
         consume: vi.fn<RateLimiter['consume']>().mockResolvedValue({ allowed: true, retryAfterSeconds: 0 })
     }
@@ -153,10 +172,17 @@ beforeEach(() => {
         })
     container = {
         config: { internalToken: INTERNAL_TOKEN, cronSecret: undefined },
-        adminAccess: { adminToken: ADMIN_TOKEN, adminEmails: [ADMIN_EMAIL], sessionEmail: async () => sessionEmail },
+        access: {
+            adminToken: ADMIN_TOKEN,
+            adminEmails: [ADMIN_EMAIL],
+            session: async () => session,
+            endSession: async () => endSession(),
+            userExists: id => userRepository.exists(id)
+        },
         rateLimiter,
         processOutbox: new ProcessOutbox(repository.outbox, new EventHandlerRegistry(), clock),
-        pets: buildPets()
+        pets: buildPets(),
+        users
     }
 })
 
@@ -354,7 +380,7 @@ describe('PATCH /api/v1/pets/:id', () => {
 
     it('rejects every token when no admin token is configured', async () => {
         const pet = await createPet()
-        container.adminAccess = { ...container.adminAccess, adminToken: undefined }
+        container.access = { ...container.access, adminToken: undefined }
 
         expect((await reunite(pet.id, 'undefined')).status).toBe(403)
     })
@@ -507,14 +533,14 @@ describe('admin moderation endpoints', () => {
 describe('admin panel session', () => {
     it('treats a signed-in admin email like the admin token', async () => {
         const pet = await createPet()
-        sessionEmail = 'Admin@Example.com'
+        session = { email: 'Admin@Example.com', userId: null }
 
         expect((await call('GET', '/api/v1/admin/pets')).status).toBe(200)
         expect((await call('DELETE', `/api/v1/pets/${pet.id}`)).status).toBe(204)
     })
 
     it('ignores sessions of emails not on the allowlist', async () => {
-        sessionEmail = 'someone@example.com'
+        session = { email: 'someone@example.com', userId: null }
 
         expect((await call('GET', '/api/v1/admin/pets')).status).toBe(403)
     })
@@ -755,5 +781,107 @@ describe('GET /api/v1/pets?q= (semantic search)', () => {
         await call('GET', '/api/v1/pets')
 
         expect(rateLimiter.consume).not.toHaveBeenCalled()
+    })
+})
+
+/** Signs a Google account in through the users module and makes it the session of the next calls. */
+async function signIn(subject: string, email = `${subject}@example.com`): Promise<string> {
+    const user = await users.signIn.execute({ provider: 'google', subject, email, name: `${subject} Surname` })
+    session = { email, userId: user.id }
+    return user.id
+}
+
+describe('user accounts', () => {
+    it('returns the signed-in user with only the first name', async () => {
+        const id = await signIn('ana')
+
+        const { status, body } = await call<MeDto>('GET', '/api/v1/me')
+
+        expect(status).toBe(200)
+        expect(body).toEqual({ id, name: 'ana' })
+    })
+
+    it('requires a session for /me', async () => {
+        expect((await call<ApiErrorDto>('GET', '/api/v1/me')).status).toBe(401)
+        expect((await call<ApiErrorDto>('DELETE', '/api/v1/me')).status).toBe(401)
+        expect((await call('GET', '/api/v1/me', { token: ADMIN_TOKEN })).status).toBe(401)
+    })
+
+    it('ignores old sessions without a user id', async () => {
+        session = { email: 'old@example.com', userId: null }
+
+        expect((await call('GET', '/api/v1/me')).status).toBe(401)
+    })
+
+    it('deletes the account and signs out, keeping its pets without an owner', async () => {
+        const id = await signIn('ana')
+        const pet = await createPet()
+
+        expect((await call('DELETE', '/api/v1/me')).status).toBe(204)
+        expect(endSession).toHaveBeenCalledOnce()
+        expect(await userRepository.findById(id)).toBeNull()
+        expect(await repository.findById(pet.id)).not.toBeNull()
+    })
+
+    it('deletes the account together with its pets and their images when asked', async () => {
+        await signIn('ana')
+        const own = await createPet()
+        await signIn('luis')
+        const other = await createPet()
+        await signIn('ana')
+
+        expect((await call('DELETE', '/api/v1/me', { body: { deletePets: true } })).status).toBe(204)
+        expect(await repository.findById(own.id)).toBeNull()
+        expect(await repository.findById(other.id)).not.toBeNull()
+        expect(images.deleted).toContain(IMAGE)
+    })
+
+    it('validates the account deletion body and rate limits it', async () => {
+        await signIn('ana')
+        expect((await call('DELETE', '/api/v1/me', { body: { deletePets: 'yes' } })).status).toBe(422)
+
+        rateLimiter.consume.mockResolvedValueOnce({ allowed: false, retryAfterSeconds: 60 })
+        const limited = await call('DELETE', '/api/v1/me')
+        expect(limited.status).toBe(429)
+        expect(limited.headers.get('retry-after')).toBe('60')
+    })
+
+    it('treats a session of a deleted account as anonymous', async () => {
+        const id = await signIn('ana')
+        await users.deleteAccount.execute(id)
+
+        expect((await call('GET', '/api/v1/me')).status).toBe(401)
+        const pet = await createPet()
+        expect((await repository.findById(pet.id))?.toSnapshot().ownerId).toBeNull()
+        // The stale session can still sign out cleanly.
+        expect((await call('DELETE', '/api/v1/me')).status).toBe(204)
+        expect(endSession).toHaveBeenCalledOnce()
+    })
+
+    it('makes the signed-in user the owner of the pets they report', async () => {
+        const ownerId = await signIn('ana')
+        const pet = await createPet()
+        expect((await repository.findById(pet.id))?.toSnapshot().ownerId).toBe(ownerId)
+
+        await signIn('luis')
+        expect((await call('DELETE', `/api/v1/pets/${pet.id}`)).status).toBe(403)
+
+        await signIn('ana')
+        expect((await call('PATCH', `/api/v1/pets/${pet.id}`, { body: { resolution: 'reunited' } })).status).toBe(200)
+        expect((await call('DELETE', `/api/v1/pets/${pet.id}`)).status).toBe(204)
+    })
+
+    it('keeps anonymous reports without an owner', async () => {
+        const pet = await createPet()
+
+        expect((await repository.findById(pet.id))?.toSnapshot().ownerId).toBeNull()
+    })
+
+    it('gives admins signed in with Google an account too', async () => {
+        const id = await signIn('admin', ADMIN_EMAIL)
+        const pet = await createPet()
+
+        expect((await repository.findById(pet.id))?.toSnapshot().ownerId).toBe(id)
+        expect((await call('GET', '/api/v1/admin/pets')).status).toBe(200)
     })
 })

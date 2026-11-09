@@ -2,6 +2,7 @@
     import { PET_LIMITS, type PetDto, type PetMatchDto, type ReportPetRequest } from '~~/contracts/pets'
 
     const { t } = useI18n()
+    const { loggedIn } = useUserSession()
     useHead(() => ({ title: `${t('publish_report')} · ${t('app_name')}` }))
 
     type PetForm = Omit<ReportPetRequest, 'images'>
@@ -153,6 +154,11 @@
         <template v-else>
             <h1 class="text-3xl sm:text-4xl">{{ $t('publish_report') }}</h1>
             <p class="mt-2 text-muted">{{ $t('form_intro') }}</p>
+            <div v-if="!loggedIn && step === 1 && photos.length === 0" class="alert mt-4 text-sm">
+                <Icon name="mdi:account-heart-outline" size="1.25rem" class="text-primary" />
+                <span>{{ $t('auth_report_hint') }}</span>
+                <LoginButton class="btn-sm" label="auth_login" />
+            </div>
 
             <ul class="steps mt-6 w-full">
                 <li class="step" :class="{ 'step-primary': step >= 1 }">{{ $t('step_photos') }}</li>

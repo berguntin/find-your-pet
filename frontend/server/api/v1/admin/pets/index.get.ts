@@ -6,11 +6,11 @@ import { defineApiHandler, getActor, parseWith } from '../../../../shared/infras
 
 /** Reports by moderation status (pending review by default, `all` for every pet). Admin only. */
 export default defineApiHandler(async event => {
-    const { pets, adminAccess } = useContainer()
+    const { pets, access } = useContainer()
     const { q, ...filters } = parseWith(adminListPetsQuerySchema, getQuery(event))
     const page = await pets.listForModeration.execute(
         { ...filters, query: q || undefined },
-        await getActor(event, adminAccess)
+        await getActor(event, access)
     )
     return toAdminPetPageDto(page)
 })
