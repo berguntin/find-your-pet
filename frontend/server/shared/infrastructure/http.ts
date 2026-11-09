@@ -84,10 +84,14 @@ export async function getActor(event: H3Event, access: ActorAccess): Promise<Act
 }
 
 /** The signed-in user, or 401: for actions that need an account (admins with a session count too). */
-export async function requireUserId(event: H3Event, access: ActorAccess): Promise<string> {
+export async function requireSignedIn(event: H3Event, access: ActorAccess): Promise<{ actor: Actor; userId: string }> {
     const actor = await getActor(event, access)
     if (actor.kind === 'anonymous' || !actor.userId) throw new UnauthorizedError()
-    return actor.userId
+    return { actor, userId: actor.userId }
+}
+
+export async function requireUserId(event: H3Event, access: ActorAccess): Promise<string> {
+    return (await requireSignedIn(event, access)).userId
 }
 
 /** Guards internal endpoints (outbox processing, cleanups) called by schedulers. */
@@ -95,9 +99,17 @@ export function requireBearerToken(event: H3Event, tokens: (string | undefined)[
     if (!tokens.some(token => token && hasBearerToken(event, token))) throw new UnauthorizedError()
 }
 
-/** Counts the request against `policy` for the client IP and rejects it with 429 when over the limit. */
-export async function enforceRateLimit(event: H3Event, limiter: RateLimiter, policy: RateLimitPolicy): Promise<void> {
-    const { allowed, retryAfterSeconds } = await limiter.consume(policy, clientIp(event))
+/**
+ * Counts the request against `policy` and rejects it with 429 when over the limit. The counter is per
+ * client IP unless `key` says otherwise (e.g. `user:<id>` for actions that need an account).
+ */
+export async function enforceRateLimit(
+    event: H3Event,
+    limiter: RateLimiter,
+    policy: RateLimitPolicy,
+    key: string = clientIp(event)
+): Promise<void> {
+    const { allowed, retryAfterSeconds } = await limiter.consume(policy, key)
     if (!allowed) throw new RateLimitedError(retryAfterSeconds)
 }
 

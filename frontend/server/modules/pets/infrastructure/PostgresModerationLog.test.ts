@@ -17,6 +17,7 @@ describe.skipIf(!url)('PostgresModerationLog', () => {
     const decision = (overrides: Partial<ModerationRecord> = {}): ModerationRecord => ({
         id: `00000000-0000-4000-8000-${String(++counter).padStart(12, '0')}`,
         petId: '00000000-0000-4000-9000-000000000001',
+        sightingId: null,
         source: 'automatic',
         decision: 'approved',
         scores: { isPetReport: 0.9, showsAnimal: 0.8, inappropriate: 0.01 },
@@ -53,6 +54,20 @@ describe.skipIf(!url)('PostgresModerationLog', () => {
 
         expect(await log.recent(10)).toEqual([newer, older])
         expect(await log.recent(1)).toEqual([newer])
+    })
+
+    it('forgets the submission of a sighting and leaves sightings out of the daily counts', async () => {
+        const sightingId = '00000000-0000-4000-9000-000000000002'
+        await log.record(decision({ sightingId }))
+        await log.record(decision())
+
+        await log.forgetSubmission(sightingId)
+
+        const recent = await log.recent(10)
+        expect(recent.find(r => r.sightingId === sightingId)?.submission).toBeNull()
+        expect(recent.find(r => r.sightingId === null)?.submission).not.toBeNull()
+        const counts = await log.countByDay(new Date('2026-10-01T00:00:00Z'), 'Europe/Madrid')
+        expect(counts.reduce((sum, row) => sum + row.count, 0)).toBe(1)
     })
 
     it('counts decisions per day in the time zone, with failures and latencies', async () => {

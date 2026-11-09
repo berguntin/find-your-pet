@@ -1,6 +1,8 @@
 import type { Page } from '../../../shared/application/ports'
+import { ConflictError } from '../../../shared/domain/errors'
 import type { ModerationDecision, ModerationRecord, ModerationScores, ModerationSource } from '../domain/moderation'
 import type { Pet } from '../domain/Pet'
+import type { Sighting } from '../domain/Sighting'
 import type { ModerationStatus, ReportType, Resolution, Species } from '../domain/values'
 
 export interface PetSearchCriteria {
@@ -82,6 +84,8 @@ export interface PetDescriber {
 }
 
 export interface ModerationSubmission {
+    /** A new notice, or a sighting added to an existing one (then `reportType` is the notice's). */
+    kind?: 'report' | 'sighting'
     reportType: ReportType
     species: Species
     name: string | null
@@ -102,6 +106,8 @@ export interface ContentModerator {
 /** Every moderation decision, so the admin can see how the automatic moderator behaves. */
 export interface ModerationLog {
     record(record: ModerationRecord): Promise<void>
+    /** Drops the reviewed text of a sighting's decisions, once its author deletes it. */
+    forgetSubmission(sightingId: string): Promise<void>
     /** Decisions since `since`, counted per calendar day in `timeZone`, source, decision and failure. */
     countByDay(since: Date, timeZone: string): Promise<ModerationDayCount[]>
     /** Latest decisions, newest first. */
@@ -162,4 +168,41 @@ export interface PetEmbeddingIndex {
     findSimilar(vector: number[], model: string, limit: number, source: EmbeddingSource): Promise<SimilarPet[]>
     /** The given pets that already have vectors for the model. */
     findIndexed(petIds: string[], model: string): Promise<Set<string>>
+}
+
+export interface SightingRepository {
+    /** Stores a new sighting and its events. */
+    add(sighting: Sighting): Promise<void>
+    /**
+     * Updates a stored sighting, its new validations and its events. Throws StaleSightingError when someone
+     * else saved or deleted it since it was loaded (optimistic locking): concurrent changes never get lost,
+     * and a deleted sighting is never brought back.
+     */
+    save(sighting: Sighting): Promise<void>
+    findById(id: string): Promise<Sighting | null>
+    /**
+     * Sightings of a pet a viewer may see, most recently seen first: published ones, plus those by
+     * `includeAuthorId` (their own pending ones), or every one with `includeAll` (admins).
+     */
+    listByPet(
+        petId: string,
+        options: { includeAuthorId?: string | null; includeAll?: boolean; limit: number }
+    ): Promise<Sighting[]>
+    /** Sightings in a moderation status, newest first, for the admin. */
+    listByStatus(status: ModerationStatus, limit: number): Promise<Sighting[]>
+    delete(id: string): Promise<void>
+    /** Every image URL used by any sighting, to find orphan uploads. */
+    listAllImageUrls(): Promise<string[]>
+}
+
+/** Raised by SightingRepository.save when the sighting changed (or was deleted) after it was loaded. */
+export class StaleSightingError extends ConflictError {
+    constructor() {
+        super('The sighting changed in the meantime, please try again')
+    }
+}
+
+/** Public names of users (first names only), owned by the users module. */
+export interface AuthorDirectory {
+    displayNames(userIds: string[]): Promise<Map<string, string>>
 }

@@ -41,27 +41,33 @@ serve them as routes.
 
 ## API
 
-| Method | Path                                | Notes                                                                                                                                                                                                       |
-| ------ | ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| GET    | `/api/v1/pets`                      | Approved pets only. Filters `reportType`, `species`, `resolution`; cursor pagination (`cursor`, `limit`). With `q`: keyword hits first, then semantic matches ("perro negro" finds black dogs), unpaginated |
-| POST   | `/api/v1/pets`                      | Report a pet. Images must be Cloudinary URLs uploaded through the app. Moderated automatically: `422 content_rejected`, or stored as `pending_review` (hidden) or `approved`. Rate limited                  |
-| GET    | `/api/v1/pets/:id`                  | Pending pets return 404 except to admins and their owner                                                                                                                                                    |
-| PATCH  | `/api/v1/pets/:id`                  | `{ "resolution": "reunited" }`. The pet's owner (signed-in user who reported it) or an admin                                                                                                                |
-| DELETE | `/api/v1/pets/:id`                  | The pet's owner or an admin                                                                                                                                                                                 |
-| GET    | `/api/v1/me`                        | Signed-in user: `{ id, name }` (first name only). `401` without a session                                                                                                                                   |
-| DELETE | `/api/v1/me`                        | `{ "deletePets"?: boolean }`. Deletes the signed-in user's account (and, if asked, every pet they reported, with its images) and signs out. Otherwise their pets stay, without an owner. Rate limited       |
-| POST   | `/api/v1/pets/describe`             | Pre-fills the form from a photo (OpenAI). Rate limited                                                                                                                                                      |
-| POST   | `/api/v1/pets/search-by-image`      | `{ image: dataUrl }` → published, open pets that look alike, with a calibrated `match` (0–100). The photo is not stored. `503` without Gemini. Rate limited                                                 |
-| POST   | `/api/v1/uploads/signature`         | Signed parameters to upload an image straight to Cloudinary. Rate limited                                                                                                                                   |
-| GET    | `/api/v1/admin/pets`                | Admin. Reports by `moderationStatus` (`pending_review` by default, `all` for every pet), with moderation scores                                                                                             |
-| GET    | `/api/v1/admin/pets/:id`            | Admin. Any pet with its moderation scores                                                                                                                                                                   |
-| PATCH  | `/api/v1/admin/pets/:id`            | Admin. Any reported detail, the photos (removed ones are deleted) and `resolution` (`open`/`reunited`)                                                                                                      |
-| PATCH  | `/api/v1/admin/pets/:id/moderation` | Admin. `{ "status": "approved" }` publishes; `"pending_review"` hides a published pet; `"rejected"` deletes the report and its images                                                                       |
-| GET    | `/api/v1/admin/stats?days=30`       | Admin. New lost/found pets and reunions per day (Europe/Madrid days) vs the previous period, and totals. `days`: 7, 30 or 90                                                                                |
-| GET    | `/api/v1/admin/moderation?days=30`  | Admin. Moderator setup and thresholds, automatic and admin decisions per day, latency, latest decisions                                                                                                     |
-| \*     | `/api/internal/outbox/process`      | Internal token. Delivers pending domain events                                                                                                                                                              |
-| \*     | `/api/internal/search/backfill`     | Internal token. Indexes published pets missing from search                                                                                                                                                  |
-| \*     | `/api/internal/images/cleanup`      | Internal token. Deletes uploads older than a day that no pet uses                                                                                                                                           |
+| Method | Path                                            | Notes                                                                                                                                                                                                        |
+| ------ | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| GET    | `/api/v1/pets`                                  | Approved pets only. Filters `reportType`, `species`, `resolution`; cursor pagination (`cursor`, `limit`). With `q`: keyword hits first, then semantic matches ("perro negro" finds black dogs), unpaginated  |
+| POST   | `/api/v1/pets`                                  | Report a pet. Images must be Cloudinary URLs uploaded through the app. Moderated automatically: `422 content_rejected`, or stored as `pending_review` (hidden) or `approved`. Rate limited                   |
+| GET    | `/api/v1/pets/:id`                              | Pending pets return 404 except to admins and their owner                                                                                                                                                     |
+| PATCH  | `/api/v1/pets/:id`                              | `{ "resolution": "reunited" }`. The pet's owner (signed-in user who reported it) or an admin                                                                                                                 |
+| DELETE | `/api/v1/pets/:id`                              | The pet's owner or an admin                                                                                                                                                                                  |
+| GET    | `/api/v1/me`                                    | Signed-in user: `{ id, name }` (first name only). `401` without a session                                                                                                                                    |
+| DELETE | `/api/v1/me`                                    | `{ "deletePets"?: boolean }`. Deletes the signed-in user's account (and, if asked, every pet they reported, with its images) and signs out. Otherwise their pets stay, without an owner. Rate limited        |
+| GET    | `/api/v1/pets/:id/sightings`                    | Published sightings of a pet (plus the viewer's own pending ones), with first names, points, `verified`/`verifiedBy` and what the viewer may do. `threshold` and `viewerIsPetOwner`                          |
+| POST   | `/api/v1/pets/:id/sightings`                    | Signed-in users. `{ description, area, seenAt, images? }` (0–3 app-uploaded images) on a published, open pet. Moderated like reports (`422 content_rejected`, or `pending_review`). Rate limited per account |
+| POST   | `/api/v1/sightings/:id/validations`             | Signed-in users, once each, not the author. 1 point, or 3 from the pet's owner; verified at 3. `409` if repeated or the pet is reunited. Rate limited per account                                            |
+| DELETE | `/api/v1/sightings/:id`                         | The author or an admin. Deletes its images                                                                                                                                                                   |
+| POST   | `/api/v1/pets/describe`                         | Pre-fills the form from a photo (OpenAI). Rate limited                                                                                                                                                       |
+| POST   | `/api/v1/pets/search-by-image`                  | `{ image: dataUrl }` → published, open pets that look alike, with a calibrated `match` (0–100). The photo is not stored. `503` without Gemini. Rate limited                                                  |
+| POST   | `/api/v1/uploads/signature`                     | Signed parameters to upload an image straight to Cloudinary. Rate limited                                                                                                                                    |
+| GET    | `/api/v1/admin/pets`                            | Admin. Reports by `moderationStatus` (`pending_review` by default, `all` for every pet), with moderation scores                                                                                              |
+| GET    | `/api/v1/admin/pets/:id`                        | Admin. Any pet with its moderation scores                                                                                                                                                                    |
+| PATCH  | `/api/v1/admin/pets/:id`                        | Admin. Any reported detail, the photos (removed ones are deleted) and `resolution` (`open`/`reunited`)                                                                                                       |
+| PATCH  | `/api/v1/admin/pets/:id/moderation`             | Admin. `{ "status": "approved" }` publishes; `"pending_review"` hides a published pet; `"rejected"` deletes the report and its images                                                                        |
+| GET    | `/api/v1/admin/sightings?status=pending_review` | Admin. Sightings by moderation status, with scores                                                                                                                                                           |
+| PATCH  | `/api/v1/admin/sightings/:id/moderation`        | Admin. `approved`, `pending_review` or `rejected` (deletes it and its images)                                                                                                                                |
+| GET    | `/api/v1/admin/stats?days=30`                   | Admin. New lost/found pets and reunions per day (Europe/Madrid days) vs the previous period, and totals. `days`: 7, 30 or 90                                                                                 |
+| GET    | `/api/v1/admin/moderation?days=30`              | Admin. Moderator setup and thresholds, automatic and admin decisions per day, latency, latest decisions                                                                                                      |
+| \*     | `/api/internal/outbox/process`                  | Internal token. Delivers pending domain events                                                                                                                                                               |
+| \*     | `/api/internal/search/backfill`                 | Internal token. Indexes published pets missing from search                                                                                                                                                   |
+| \*     | `/api/internal/images/cleanup`                  | Internal token. Deletes uploads older than a day that no pet or sighting uses                                                                                                                                |
 
 Errors always look like `{ "error": { "code", "message", "details" } }`; `429` responses include `Retry-After`.
 Admin actions accept an admin's Google session or `Authorization: Bearer $NUXT_ADMIN_TOKEN` (scripts); internal
@@ -78,6 +84,22 @@ Anyone can sign in with Google (`/entrar`, or `/auth/google?returnTo=<path>`); i
 - Pets reported while signed in get an `owner_id`, so their owner can mark them reunited or delete them.
 - `DELETE /api/v1/me` deletes the account; its pets are deleted too if asked, otherwise they stay public without an owner.
 - Same Google OAuth client and session variables as the admin panel (below).
+
+## Sightings
+
+Anyone signed in can add a sighting ("I saw it here") to a published, open notice: description, approximate
+area (never an exact address), when, and up to 3 photos. They go through the same automatic moderation as
+reports (without photos, "shows an animal" is not required) and every decision is logged in
+`moderation_decisions` with its `sighting_id`. Other signed-in people can back a sighting once: 1 point each,
+3 from the pet's owner, verified at 3. Verified means "backed by others", never "this is your pet", and it is
+not undone. Validations use optimistic locking (`pet_sightings.version`) so concurrent ones are not lost.
+Sightings mentioning phone numbers, emails, links, payments or messaging apps (`looksLikeContactOrPayment`)
+always wait for an admin, whatever the moderator says, since "I have your pet, send money" is the usual scam.
+Photos already used by a pet or sighting are refused, and deletions never remove an image another pet or
+sighting still uses (`SharedImageGuard`). The pet's owner can hide a sighting from their notice (back to
+review). Limits apply per account and per IP. Deleting an account keeps its sightings without an author and
+removes its validations; deleting a sighting also drops its text from the moderation log. `sighting.published`
+and `sighting.verified` go through the outbox for future notifications.
 
 ## Admin panel
 
@@ -97,7 +119,7 @@ Anyone can sign in with Google (`/entrar`, or `/auth/google?returnTo=<path>`); i
   published, clearly unrelated or inappropriate ones are rejected and their images deleted, and anything
   uncertain (or any moderator failure) waits hidden for an admin. Without an OpenAI key, development approves
   everything and production sends everything to review.
-- **Rate limiting**: Upstash Redis, per client IP, on report, describe and upload signature. Off without Upstash.
+- **Rate limiting**: Upstash Redis, per client IP on report, describe and upload signature, and per account on sightings and validations. Off without Upstash.
 - **Image and semantic search**: when a pet is published, an outbox handler embeds its photos and its report
   text with Gemini Embedding 2 (multimodal, 768 dimensions) into `pet_image_embeddings` and
   `pet_text_embeddings` (pgvector, HNSW).

@@ -11,6 +11,7 @@ import type {
 interface ModerationRow {
     id: string
     pet_id: string | null
+    sighting_id: string | null
     source: ModerationSource
     decision: ModerationDecision
     scores: ModerationScores | null
@@ -28,13 +29,17 @@ export class PostgresModerationLog implements ModerationLog {
         const sql = this.sql
         await sql`
             insert into moderation_decisions
-                (id, pet_id, source, decision, scores, model, error, latency_ms, submission, decided_at)
+                (id, pet_id, sighting_id, source, decision, scores, model, error, latency_ms, submission, decided_at)
             values (
-                ${record.id}, ${record.petId}, ${record.source}, ${record.decision},
+                ${record.id}, ${record.petId}, ${record.sightingId}, ${record.source}, ${record.decision},
                 ${record.scores && sql.json(record.scores as never)}, ${record.model}, ${record.error},
                 ${record.latencyMs}, ${record.submission && sql.json(record.submission as never)}, ${record.decidedAt}
             )
         `
+    }
+
+    async forgetSubmission(sightingId: string): Promise<void> {
+        await this.sql`update moderation_decisions set submission = null where sighting_id = ${sightingId}`
     }
 
     async countByDay(since: Date, timeZone: string): Promise<ModerationDayCount[]> {
@@ -58,7 +63,8 @@ export class PostgresModerationLog implements ModerationLog {
                 coalesce(sum(latency_ms), 0)::int as latency_ms_total,
                 count(latency_ms)::int as latency_count
             from moderation_decisions
-            where decided_at >= ${since}
+            -- The moderator's statistics are about notices; sightings are listed among the recent decisions.
+            where decided_at >= ${since} and sighting_id is null
             group by 1, 2, 3, 4
         `
         return rows.map(row => ({
@@ -79,6 +85,7 @@ export class PostgresModerationLog implements ModerationLog {
         return rows.map(row => ({
             id: row.id,
             petId: row.pet_id,
+            sightingId: row.sighting_id,
             source: row.source,
             decision: row.decision,
             scores: row.scores,

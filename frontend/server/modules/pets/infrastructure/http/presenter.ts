@@ -5,6 +5,10 @@ import type { ModerationOverview } from '../../application/stats'
 import type { Page } from '../../../../shared/application/ports'
 import type { PetDescription } from '../../application/ports'
 import type { Pet } from '../../domain/Pet'
+import type { AdminSightingDto, SightingDto, SightingListDto } from '../../../../../contracts/sightings'
+import type { PetSightings, SightingView } from '../../application/sightings'
+import type { Sighting } from '../../domain/Sighting'
+import { SIGHTING_VERIFICATION } from '../../domain/values'
 
 /** Owner ids are internal: they are never exposed through the API. */
 export function toPetDto(pet: Pet): PetDto {
@@ -61,4 +65,35 @@ export function toModerationOverviewDto(overview: ModerationOverview): Moderatio
         ...overview,
         recent: overview.recent.map(record => ({ ...record, decidedAt: record.decidedAt.toISOString() }))
     }
+}
+
+function sightingFields(sighting: Sighting) {
+    const s = sighting.toSnapshot()
+    return {
+        id: s.id,
+        petId: s.petId,
+        description: s.description,
+        area: s.area,
+        seenAt: s.seenAt.toISOString(),
+        images: s.images,
+        moderationStatus: s.moderationStatus,
+        points: sighting.points,
+        verified: sighting.isVerified,
+        verifiedBy: s.verifiedBy,
+        createdAt: s.createdAt.toISOString()
+    }
+}
+
+/** Author ids and who validated stay internal: viewers only learn about themselves. */
+export function toSightingDto({ sighting, authorName, viewer }: SightingView): SightingDto {
+    return { ...sightingFields(sighting), authorName, viewer }
+}
+
+export function toSightingListDto({ items, viewerIsPetOwner }: PetSightings): SightingListDto {
+    return { items: items.map(toSightingDto), threshold: SIGHTING_VERIFICATION.threshold, viewerIsPetOwner }
+}
+
+export function toAdminSightingDto(sighting: Sighting): AdminSightingDto {
+    const { moderationScores, moderatedAt } = sighting.toSnapshot()
+    return { ...sightingFields(sighting), moderationScores, moderatedAt: moderatedAt?.toISOString() ?? null }
 }

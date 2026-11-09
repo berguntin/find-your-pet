@@ -83,6 +83,15 @@ export class DisabledContentModerator implements ContentModerator {
 }
 
 function describe(submission: ModerationSubmission): string {
+    if (submission.kind === 'sighting') {
+        return [
+            `Notice type: a sighting ("I saw this animal") added to an existing notice of a ${
+                submission.reportType === 'lost' ? 'lost' : 'found'
+            } ${SPECIES_LABEL[submission.species]}`,
+            `Description: ${submission.description}`,
+            `Location: ${submission.location}`
+        ].join('\n')
+    }
     return [
         `Notice type: ${submission.reportType === 'lost' ? 'I lost my pet' : 'I found a pet'}`,
         `Animal: ${SPECIES_LABEL[submission.species]}`,

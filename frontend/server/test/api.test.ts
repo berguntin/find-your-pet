@@ -8,17 +8,19 @@ import { createApp, createRouter, toWebHandler } from 'h3'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AdminPetDto, AdminPetPageDto, ModerationOverviewDto, PetStatsDto } from '../../contracts/admin'
 import type { ApiErrorDto, PetDto, PetMatchListDto, PetPageDto, ReportPetRequest } from '../../contracts/pets'
+import type { AdminSightingListDto, SightingDto, SightingListDto } from '../../contracts/sightings'
 import type { MeDto } from '../../contracts/users'
 import type { Container } from '../container'
 import { createPetsModule } from '../modules/pets'
 import { petSearchText } from '../modules/pets/application/search'
-import type { ContentModerator, PetDescriber } from '../modules/pets/application/ports'
+import { StaleSightingError, type ContentModerator, type PetDescriber } from '../modules/pets/application/ports'
 import { FakeEmbedder } from '../modules/pets/infrastructure/FakeEmbedder'
 import { UnavailableEmbedder } from '../modules/pets/infrastructure/GeminiEmbedder'
 import { InMemoryModerationLog } from '../modules/pets/infrastructure/InMemoryModerationLog'
 import { InMemoryImageStorage } from '../modules/pets/infrastructure/InMemoryImageStorage'
 import { InMemoryPetEmbeddingIndex } from '../modules/pets/infrastructure/InMemoryPetEmbeddingIndex'
 import { InMemoryPetRepository } from '../modules/pets/infrastructure/InMemoryPetRepository'
+import { InMemorySightingRepository } from '../modules/pets/infrastructure/InMemorySightingRepository'
 import { createUsersModule } from '../modules/users'
 import { InMemoryUserRepository } from '../modules/users/infrastructure/InMemoryUserRepository'
 import { EventHandlerRegistry, ProcessOutbox } from '../shared/application/outbox'
@@ -35,6 +37,13 @@ const { default: listPets } = await import('../api/v1/pets/index.get')
 const { default: reportPet } = await import('../api/v1/pets/index.post')
 const { default: getMe } = await import('../api/v1/me/index.get')
 const { default: deleteMe } = await import('../api/v1/me/index.delete')
+const { default: listSightings } = await import('../api/v1/pets/[id]/sightings.get')
+const { default: reportSighting } = await import('../api/v1/pets/[id]/sightings.post')
+const { default: validateSighting } = await import('../api/v1/sightings/[id]/validations.post')
+const { default: deleteSighting } = await import('../api/v1/sightings/[id].delete')
+const { default: hideSighting } = await import('../api/v1/sightings/[id]/hide.post')
+const { default: adminListSightings } = await import('../api/v1/admin/sightings/index.get')
+const { default: moderateSighting } = await import('../api/v1/admin/sightings/[id]/moderation.patch')
 const { default: getPet } = await import('../api/v1/pets/[id].get')
 const { default: updatePet } = await import('../api/v1/pets/[id].patch')
 const { default: deletePet } = await import('../api/v1/pets/[id].delete')
@@ -56,6 +65,13 @@ const router = createRouter()
     .post('/api/v1/pets', reportPet)
     .post('/api/v1/pets/describe', describePet)
     .post('/api/v1/pets/search-by-image', searchByImage)
+    .get('/api/v1/pets/:id/sightings', listSightings)
+    .post('/api/v1/pets/:id/sightings', reportSighting)
+    .post('/api/v1/sightings/:id/validations', validateSighting)
+    .delete('/api/v1/sightings/:id', deleteSighting)
+    .post('/api/v1/sightings/:id/hide', hideSighting)
+    .get('/api/v1/admin/sightings', adminListSightings)
+    .patch('/api/v1/admin/sightings/:id/moderation', moderateSighting)
     .get('/api/v1/pets/:id', getPet)
     .patch('/api/v1/pets/:id', updatePet)
     .delete('/api/v1/pets/:id', deletePet)
@@ -108,7 +124,8 @@ const report = (overrides: Partial<ReportPetRequest> = {}): ReportPetRequest => 
     location: 'Paiporta',
     contact: '600000000',
     eventDate: '2026-10-18',
-    images: [IMAGE],
+    // A fresh upload per report: a photo already used by another pet is refused.
+    images: [images.upload(`${randomUUID()}.jpg`)],
     ...overrides
 })
 
@@ -127,6 +144,7 @@ let userRepository: InMemoryUserRepository
 let users: Container['users']
 let rateLimiter: { consume: ReturnType<typeof vi.fn<RateLimiter['consume']>> }
 let repository: InMemoryPetRepository
+let sightingRepository: InMemorySightingRepository
 let images: InMemoryImageStorage
 let embedder: FakeEmbedder
 let embeddingIndex: InMemoryPetEmbeddingIndex
@@ -151,6 +169,7 @@ beforeEach(() => {
         consume: vi.fn<RateLimiter['consume']>().mockResolvedValue({ allowed: true, retryAfterSeconds: 0 })
     }
     repository = new InMemoryPetRepository()
+    sightingRepository = new InMemorySightingRepository()
     images = new InMemoryImageStorage()
     embedder = new FakeEmbedder()
     // Anything a test does not register embeds far from every query.
@@ -160,6 +179,8 @@ beforeEach(() => {
     buildPets = (overrides = {}) =>
         createPetsModule({
             pets: repository,
+            sightings: sightingRepository,
+            authors: userRepository,
             images,
             describer,
             moderator,
@@ -220,12 +241,13 @@ describe('POST /api/v1/pets', () => {
     it('rejects content that is not a pet report with 422 content_rejected', async () => {
         moderator.review.mockResolvedValueOnce(REJECT)
 
-        const { status, body } = await call<ApiErrorDto>('POST', '/api/v1/pets', { body: report() })
+        const rejected = report()
+        const { status, body } = await call<ApiErrorDto>('POST', '/api/v1/pets', { body: rejected })
 
         expect(status).toBe(422)
         expect(body.error.code).toBe('content_rejected')
         expect(repository.outbox.pending()).toEqual([])
-        expect(images.deleted).toEqual([IMAGE])
+        expect(images.deleted).toEqual(rejected.images)
     })
 
     it('returns 429 with Retry-After when over the rate limit', async () => {
@@ -518,7 +540,7 @@ describe('admin moderation endpoints', () => {
 
         expect(status).toBe(204)
         expect((await call('GET', `/api/v1/pets/${pending.id}`, { token: ADMIN_TOKEN })).status).toBe(404)
-        expect(images.deleted).toEqual([IMAGE])
+        expect(images.deleted).toEqual(pending.images)
     })
 
     it('requires the admin token and a valid status', async () => {
@@ -696,7 +718,7 @@ describe('POST /api/v1/pets/search-by-image', () => {
     const photo = `data:image/jpeg;base64,${Buffer.from('my-dog').toString('base64')}`
 
     it('returns similar public pets with their match percentage', async () => {
-        const pet = await createPet()
+        const pet = await createPet({ images: [IMAGE] })
         embedder.register(images.previewUrl(IMAGE, 512), [1, 0]).register('my-dog', [1, 0])
         await container.pets.indexForSearch.execute(pet.id)
 
@@ -833,7 +855,7 @@ describe('user accounts', () => {
         expect((await call('DELETE', '/api/v1/me', { body: { deletePets: true } })).status).toBe(204)
         expect(await repository.findById(own.id)).toBeNull()
         expect(await repository.findById(other.id)).not.toBeNull()
-        expect(images.deleted).toContain(IMAGE)
+        expect(images.deleted).toEqual(own.images)
     })
 
     it('validates the account deletion body and rate limits it', async () => {
@@ -883,5 +905,273 @@ describe('user accounts', () => {
 
         expect((await repository.findById(pet.id))?.toSnapshot().ownerId).toBe(id)
         expect((await call('GET', '/api/v1/admin/pets')).status).toBe(200)
+    })
+})
+
+describe('pet sightings', () => {
+    const sightingBody = (overrides: Record<string, unknown> = {}) => ({
+        description: 'Lo he visto junto a la estación de metro',
+        area: 'Paiporta, junto a la estación',
+        seenAt: '2026-10-19T08:00:00+02:00',
+        ...overrides
+    })
+
+    /** A published pet whose owner is the signed-in `owner` account. */
+    async function ownedPet(): Promise<PetDto> {
+        await signIn('owner')
+        const pet = await createPet()
+        session = null
+        return pet
+    }
+
+    async function postSighting(petId: string, author = 'ana', overrides: Record<string, unknown> = {}) {
+        await signIn(author)
+        return call<SightingDto>('POST', `/api/v1/pets/${petId}/sightings`, { body: sightingBody(overrides) })
+    }
+
+    it('lets signed-in people report a sighting that everyone then sees', async () => {
+        const pet = await ownedPet()
+        const created = await postSighting(pet.id)
+
+        expect(created.status).toBe(201)
+        expect(created.body).toMatchObject({
+            petId: pet.id,
+            area: 'Paiporta, junto a la estación',
+            seenAt: '2026-10-19T06:00:00.000Z',
+            moderationStatus: 'approved',
+            points: 0,
+            verified: false
+        })
+        expect(created.body).not.toHaveProperty('authorId')
+
+        session = null
+        const { status, body } = await call<SightingListDto>('GET', `/api/v1/pets/${pet.id}/sightings`)
+        expect(status).toBe(200)
+        expect(body.threshold).toBe(3)
+        expect(body.items).toHaveLength(1)
+        expect(body.items[0]).toMatchObject({
+            authorName: 'ana',
+            viewer: { isAuthor: false, hasValidated: false, canValidate: false }
+        })
+        expect(JSON.stringify(body)).not.toContain('ana@example.com')
+    })
+
+    it('requires a session to report or validate, and rate limits per account', async () => {
+        const pet = await ownedPet()
+        expect((await call('POST', `/api/v1/pets/${pet.id}/sightings`, { body: sightingBody() })).status).toBe(401)
+        const sighting = (await postSighting(pet.id)).body
+        session = null
+        expect((await call('POST', `/api/v1/sightings/${sighting.id}/validations`)).status).toBe(401)
+
+        const userId = await signIn('luis')
+        rateLimiter.consume.mockResolvedValueOnce({ allowed: false, retryAfterSeconds: 120 })
+        const limited = await call('POST', `/api/v1/pets/${pet.id}/sightings`, { body: sightingBody() })
+        expect(limited.status).toBe(429)
+        expect(limited.headers.get('retry-after')).toBe('120')
+        expect(rateLimiter.consume).toHaveBeenLastCalledWith(
+            expect.objectContaining({ name: 'report-sighting' }),
+            `user:${userId}`
+        )
+
+        // Also per IP: several accounts from one place share a limit.
+        rateLimiter.consume.mockResolvedValueOnce({ allowed: true, retryAfterSeconds: 0 })
+        rateLimiter.consume.mockResolvedValueOnce({ allowed: false, retryAfterSeconds: 60 })
+        expect((await call('POST', `/api/v1/pets/${pet.id}/sightings`, { body: sightingBody() })).status).toBe(429)
+        expect(rateLimiter.consume).toHaveBeenLastCalledWith(
+            expect.objectContaining({ name: 'report-sighting-ip' }),
+            expect.not.stringMatching(/^user:/)
+        )
+    })
+
+    it("refuses another notice's photos, so deleting the sighting cannot delete them", async () => {
+        const pet = await ownedPet()
+
+        const reused = await postSighting(pet.id, 'ana', { images: pet.images })
+
+        expect(reused.status).toBe(422)
+        expect(images.deleted).toEqual([])
+    })
+
+    it('refuses photos another notice uses, for new and edited notices', async () => {
+        const pet = await createPet()
+
+        expect((await call('POST', '/api/v1/pets', { body: report({ images: pet.images }) })).status).toBe(422)
+        const other = await createPet()
+        const edit = await call('PATCH', `/api/v1/admin/pets/${other.id}`, {
+            body: { images: pet.images },
+            token: ADMIN_TOKEN
+        })
+        expect(edit.status).toBe(422)
+    })
+
+    it('validates the body', async () => {
+        const pet = await ownedPet()
+
+        expect((await postSighting(pet.id, 'ana', { area: '' })).status).toBe(422)
+        expect((await postSighting(pet.id, 'ana', { seenAt: 'yesterday' })).status).toBe(422)
+        expect((await postSighting(pet.id, 'ana', { seenAt: '2027-01-01T00:00:00Z' })).status).toBe(422)
+        expect((await postSighting(pet.id, 'ana', { images: ['https://evil.test/a.jpg'] })).status).toBe(422)
+        expect((await postSighting('not-a-uuid')).status).toBe(404)
+    })
+
+    it('is verified by three people', async () => {
+        const pet = await ownedPet()
+        const sighting = (await postSighting(pet.id)).body
+
+        for (const name of ['b', 'c']) {
+            await signIn(name)
+            const { status, body } = await call<SightingDto>('POST', `/api/v1/sightings/${sighting.id}/validations`)
+            expect(status).toBe(200)
+            expect(body.verified).toBe(false)
+        }
+        await signIn('d')
+        const { body } = await call<SightingDto>('POST', `/api/v1/sightings/${sighting.id}/validations`)
+        expect(body).toMatchObject({ points: 3, verified: true, verifiedBy: 'community' })
+    })
+
+    it("is verified by the pet's owner on their own", async () => {
+        const pet = await ownedPet()
+        const sighting = (await postSighting(pet.id)).body
+
+        await signIn('owner')
+        const { body } = await call<SightingDto>('POST', `/api/v1/sightings/${sighting.id}/validations`)
+
+        expect(body).toMatchObject({ points: 3, verified: true, verifiedBy: 'owner' })
+        const list = await call<SightingListDto>('GET', `/api/v1/pets/${pet.id}/sightings`)
+        expect(list.body.viewerIsPetOwner).toBe(true)
+        expect(list.body.items[0]!.viewer).toEqual({
+            isAuthor: false,
+            hasValidated: true,
+            canValidate: false,
+            canHide: true
+        })
+    })
+
+    it('rejects validations by the author and repeated ones', async () => {
+        const pet = await ownedPet()
+        const sighting = (await postSighting(pet.id)).body
+
+        expect((await call('POST', `/api/v1/sightings/${sighting.id}/validations`)).status).toBe(403)
+        await signIn('luis')
+        expect((await call('POST', `/api/v1/sightings/${sighting.id}/validations`)).status).toBe(200)
+        expect((await call('POST', `/api/v1/sightings/${sighting.id}/validations`)).status).toBe(409)
+        expect((await call('POST', '/api/v1/sightings/nope/validations')).status).toBe(404)
+    })
+
+    it('does not take sightings for hidden or reunited pets', async () => {
+        moderator.review.mockResolvedValueOnce(REVIEW)
+        const hidden = await createPet()
+        expect((await postSighting(hidden.id)).status).toBe(404)
+        session = null
+        expect((await call('GET', `/api/v1/pets/${hidden.id}/sightings`)).status).toBe(404)
+
+        const pet = await ownedPet()
+        await signIn('owner')
+        await call('PATCH', `/api/v1/pets/${pet.id}`, { body: { resolution: 'reunited' } })
+        expect((await postSighting(pet.id)).status).toBe(409)
+    })
+
+    it('keeps rejected sightings out and uncertain ones for review, visible only to their author', async () => {
+        const pet = await ownedPet()
+        moderator.review.mockResolvedValueOnce(REJECT)
+        expect((await postSighting(pet.id)).status).toBe(422)
+
+        moderator.review.mockResolvedValueOnce(REVIEW)
+        const pending = await postSighting(pet.id, 'luis')
+        expect(pending.body.moderationStatus).toBe('pending_review')
+
+        const own = await call<SightingListDto>('GET', `/api/v1/pets/${pet.id}/sightings`)
+        expect(own.body.items.map(item => item.id)).toEqual([pending.body.id])
+        session = null
+        expect((await call<SightingListDto>('GET', `/api/v1/pets/${pet.id}/sightings`)).body.items).toEqual([])
+    })
+
+    it("lets the pet's owner hide a sighting from their notice until an admin reviews it", async () => {
+        const pet = await ownedPet()
+        const sighting = (await postSighting(pet.id)).body
+        const path = `/api/v1/sightings/${sighting.id}/hide`
+
+        expect((await call('POST', path)).status).toBe(403)
+        await signIn('owner')
+        const hidden = await call<{ moderationStatus: string }>('POST', path)
+        expect(hidden.status).toBe(200)
+        expect(hidden.body.moderationStatus).toBe('pending_review')
+        expect((await call('POST', path)).status).toBe(404)
+        session = null
+        expect((await call('POST', path)).status).toBe(401)
+        expect((await call<SightingListDto>('GET', `/api/v1/pets/${pet.id}/sightings`)).body.items).toEqual([])
+    })
+
+    it('forgets what a sighting said in the moderation log once its author deletes it', async () => {
+        const pet = await ownedPet()
+        const sighting = (await postSighting(pet.id)).body
+        expect(moderationLog.records.find(r => r.sightingId === sighting.id)?.submission).not.toBeNull()
+
+        await call('DELETE', `/api/v1/sightings/${sighting.id}`)
+
+        expect(moderationLog.records.find(r => r.sightingId === sighting.id)?.submission).toBeNull()
+    })
+
+    it('answers 409 when a sighting changes at the same time', async () => {
+        const pet = await ownedPet()
+        const sighting = (await postSighting(pet.id)).body
+        vi.spyOn(sightingRepository, 'save').mockRejectedValue(new StaleSightingError())
+
+        await signIn('luis')
+        const { status, body } = await call<ApiErrorDto>('POST', `/api/v1/sightings/${sighting.id}/validations`)
+        expect(status).toBe(409)
+        expect(body.error.code).toBe('conflict')
+    })
+
+    it('lets the author or an admin delete a sighting', async () => {
+        const pet = await ownedPet()
+        const first = (await postSighting(pet.id)).body
+        const second = (await postSighting(pet.id)).body
+
+        await signIn('luis')
+        expect((await call('DELETE', `/api/v1/sightings/${first.id}`)).status).toBe(403)
+        await signIn('ana')
+        expect((await call('DELETE', `/api/v1/sightings/${first.id}`)).status).toBe(204)
+        session = null
+        expect((await call('DELETE', `/api/v1/sightings/${second.id}`, { token: ADMIN_TOKEN })).status).toBe(204)
+        expect((await call('DELETE', '/api/v1/sightings/nope', { token: ADMIN_TOKEN })).status).toBe(404)
+    })
+
+    it('lets admins list and moderate sightings', async () => {
+        const pet = await ownedPet()
+        moderator.review.mockResolvedValue(REVIEW)
+        const pending = (await postSighting(pet.id)).body
+        const spam = (await postSighting(pet.id)).body
+        session = null
+
+        expect((await call('GET', '/api/v1/admin/sightings')).status).toBe(403)
+        const list = await call<AdminSightingListDto>('GET', '/api/v1/admin/sightings', { token: ADMIN_TOKEN })
+        expect(list.body.items.map(item => item.id)).toEqual([spam.id, pending.id])
+        expect(list.body.items[0]!.moderationScores).toEqual(REVIEW)
+        expect((await call('GET', '/api/v1/admin/sightings?status=maybe', { token: ADMIN_TOKEN })).status).toBe(422)
+
+        const path = (id: string) => `/api/v1/admin/sightings/${id}/moderation`
+        const approved = await call<SightingDto>('PATCH', path(pending.id), {
+            body: { status: 'approved' },
+            token: ADMIN_TOKEN
+        })
+        expect(approved.body.moderationStatus).toBe('approved')
+        expect((await call('PATCH', path(spam.id), { body: { status: 'rejected' }, token: ADMIN_TOKEN })).status).toBe(
+            204
+        )
+        expect((await call('PATCH', path('nope'), { body: { status: 'approved' }, token: ADMIN_TOKEN })).status).toBe(
+            404
+        )
+        expect((await call('PATCH', path(pending.id), { body: { status: 'approved' } })).status).toBe(403)
+        expect(processOutboxInBackground).toHaveBeenCalled()
+    })
+
+    it('shows sightings of deleted accounts as anonymous', async () => {
+        const pet = await ownedPet()
+        await postSighting(pet.id, 'ana')
+        await call('DELETE', '/api/v1/me')
+
+        const { body } = await call<SightingListDto>('GET', `/api/v1/pets/${pet.id}/sightings`)
+        expect(body.items[0]!.authorName).toBeNull()
     })
 })

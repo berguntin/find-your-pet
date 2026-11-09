@@ -17,6 +17,7 @@ Para el correcto funcionamiento del Sitio, podemos recopilar los siguientes dato
 
 -   **Datos personales proporcionados por el usuario:** Esto incluye información como nombre, correo electrónico, número de teléfono y descripción de la mascota, que el usuario elige voluntariamente compartir al publicar un anuncio.
 -   **Contenido de las publicaciones:** Fotografías, descripciones y cualquier otra información relacionada con la mascota que los usuarios suban al Sitio.
+-   **Avistamientos:** si con la sesión iniciada compartes que has visto a una mascota, guardamos lo que escribes, la zona aproximada, la fecha y hora y las fotos que añadas, junto a tu nombre de pila, que se muestra públicamente con el avistamiento. Si respaldas el avistamiento de otra persona, guardamos que lo has hecho; eso no se muestra a nadie. La finalidad es ayudar a localizar a la mascota, y la base legal es tu consentimiento al publicarlo.
 -   **Cuenta de usuario (opcional):** si decides entrar con Google, guardamos el identificador de tu cuenta de Google y tu nombre de pila. No guardamos tu email ni tu foto en nuestra base de datos. No es necesario entrar para publicar un aviso.
 
 ## 3. Uso de la información
@@ -41,6 +42,8 @@ La información publicada en el Sitio será accesible públicamente para cumplir
 
 Para iniciar sesión usamos Google como proveedor de identidad: al entrar, Google nos confirma tu identidad y nos envía tu identificador, email, nombre y foto de perfil. El email (para comprobar si eres administrador) y la dirección de la foto (para mostrarla en tu propio menú) solo viajan dentro de la cookie de sesión cifrada de tu navegador; la foto la carga tu navegador directamente desde Google.
 
+Para revisar automáticamente avisos y avistamientos, su texto y una versión reducida de sus fotos se envían a OpenAI, que actúa como encargado del tratamiento. Las fotos se almacenan en Cloudinary. Cada decisión de moderación se guarda para auditoría con el texto revisado, sin fotos (de los avisos, tampoco el contacto). Si borras tu avistamiento, su texto también se borra de ese registro; si lo rechaza un administrador, se conserva para poder revisar la decisión.
+
 ## 7. Uso de cookies
 
 Este Sitio no utiliza cookies de seguimiento ni de publicidad. Solo usa cookies técnicas, necesarias para su funcionamiento:
@@ -56,7 +59,7 @@ Los usuarios tienen derecho a:
 -   Acceder, rectificar o eliminar los datos personales proporcionados.
 -   Retirar su consentimiento para el uso de sus datos en cualquier momento.
 
-Si tienes cuenta, puedes borrarla en cualquier momento desde tu menú de usuario ("Borrar mi cuenta"): se elimina al momento. En ese mismo paso puedes pedir que se borren también todos los avisos que publicaste con la sesión iniciada, con sus fotos; si no lo pides, seguirán visibles sin estar asociados a ti.
+Si tienes cuenta, puedes borrarla en cualquier momento desde tu menú de usuario ("Borrar mi cuenta"): se elimina al momento. En ese mismo paso puedes pedir que se borren también todos los avisos que publicaste con la sesión iniciada, con sus fotos; si no lo pides, seguirán visibles sin estar asociados a ti. Tus avistamientos se quedan publicados sin tu nombre ("Usuario eliminado") y tus respaldos se borran; si prefieres que desaparezcan, bórralos antes desde cada aviso.
 
 Para ejercer estos derechos, los usuarios pueden ponerse en contacto con nosotros en [email de contacto].
 

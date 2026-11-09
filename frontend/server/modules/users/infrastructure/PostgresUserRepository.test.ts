@@ -49,6 +49,15 @@ describe.skipIf(!url)('PostgresUserRepository', () => {
         expect(await repository.exists(duplicate.id)).toBe(false)
     })
 
+    it('returns first names by id, leaving out unknown ids', async () => {
+        await repository.create(User.register(identity, { id: USER_ID, now }), identity)
+
+        expect(await repository.displayNames([USER_ID, '00000000-0000-4000-8000-000000000999'])).toEqual(
+            new Map([[USER_ID, 'Ana']])
+        )
+        expect(await repository.displayNames([])).toEqual(new Map())
+    })
+
     it('updates the name', async () => {
         const user = User.register(identity, { id: USER_ID, now })
         await repository.create(user, identity)

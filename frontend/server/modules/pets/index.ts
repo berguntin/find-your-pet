@@ -7,15 +7,27 @@ import {
     SearchPetsByText,
     type SemanticSearchCalibration
 } from './application/search'
+import { SharedImageGuard } from './application/sharedImages'
 import { GetModerationOverview, GetPetStats } from './application/stats'
+import {
+    DeleteSighting,
+    HideSighting,
+    ListSightings,
+    ListSightingsForModeration,
+    ModerateSighting,
+    ReportSighting,
+    ValidateSighting
+} from './application/sightings'
 import type {
+    AuthorDirectory,
     ContentModerator,
     Embedder,
     ImageStorage,
     ModerationLog,
     PetDescriber,
     PetEmbeddingIndex,
-    PetRepository
+    PetRepository,
+    SightingRepository
 } from './application/ports'
 import {
     AuthorizeImageUpload,
@@ -36,6 +48,8 @@ import { DEFAULT_MODERATION_THRESHOLDS, type ModerationThresholds } from './doma
 
 export interface PetsModuleDependencies {
     pets: PetRepository
+    sightings: SightingRepository
+    authors: AuthorDirectory
     images: ImageStorage
     describer: PetDescriber
     moderator: ContentModerator
@@ -53,7 +67,9 @@ export interface PetsModuleDependencies {
 /** Public entry point of the pets module: its use cases, wired to whatever adapters the caller provides. */
 export function createPetsModule({
     pets,
-    images,
+    sightings,
+    authors,
+    images: storage,
     describer,
     moderator,
     moderationThresholds = DEFAULT_MODERATION_THRESHOLDS,
@@ -66,6 +82,8 @@ export function createPetsModule({
     ids,
     reportError = () => {}
 }: PetsModuleDependencies) {
+    // Every use case that deletes images goes through the guard; only the orphan cleanup uses the raw storage.
+    const images = new SharedImageGuard(storage, pets, sightings)
     const searchByText = new SearchPetsByText(pets, embedder, embeddingIndex, semanticCalibration)
     const indexForSearch = new IndexPetForSearch(pets, images, embedder, embeddingIndex)
     return {
@@ -83,7 +101,24 @@ export function createPetsModule({
         deleteAllOfOwner: new DeletePetsOfOwner(pets, images, reportError),
         describe: new DescribePetFromImage(describer),
         authorizeImageUpload: new AuthorizeImageUpload(images),
-        cleanUpOrphanImages: new CleanUpOrphanImages(pets, images, clock),
+        cleanUpOrphanImages: new CleanUpOrphanImages(pets, sightings, storage, clock),
+        reportSighting: new ReportSighting(
+            pets,
+            sightings,
+            images,
+            moderator,
+            moderationThresholds,
+            moderationLog,
+            clock,
+            ids,
+            reportError
+        ),
+        listSightings: new ListSightings(pets, sightings, authors),
+        validateSighting: new ValidateSighting(pets, sightings, clock),
+        hideSighting: new HideSighting(pets, sightings, clock),
+        deleteSighting: new DeleteSighting(sightings, images, moderationLog, reportError),
+        listSightingsForModeration: new ListSightingsForModeration(sightings),
+        moderateSighting: new ModerateSighting(sightings, images, moderationLog, clock, ids, reportError),
         indexForSearch,
         backfillSearchIndex: new BackfillSearchIndex(pets, embedder, embeddingIndex, indexForSearch, reportError),
         searchByImage: new SearchPetsByImage(pets, embedder, embeddingIndex, matchCalibration)

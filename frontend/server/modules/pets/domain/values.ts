@@ -24,3 +24,19 @@ export const PET_LIMITS = {
 /** Only approved pets are public. Rejected reports are never stored. */
 export const MODERATION_STATUSES = ['approved', 'pending_review'] as const
 export type ModerationStatus = (typeof MODERATION_STATUSES)[number]
+
+export const SIGHTING_LIMITS = {
+    descriptionMinLength: 10,
+    descriptionMaxLength: 1000,
+    areaMinLength: 2,
+    areaMaxLength: 120,
+    maxImages: 3,
+    /** How far back a sighting can be dated. */
+    maxAgeDays: 365
+} as const
+
+/** Points that make a sighting verified: each user adds 1, the pet's owner adds 3 (enough on their own). */
+export const SIGHTING_VERIFICATION = { threshold: 3, userWeight: 1, ownerWeight: 3 } as const
+
+export const SIGHTING_VERIFIED_BY = ['community', 'owner'] as const
+export type SightingVerifiedBy = (typeof SIGHTING_VERIFIED_BY)[number]
