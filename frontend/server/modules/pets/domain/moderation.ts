@@ -29,6 +29,8 @@ export interface ModerationRecord {
     id: string
     /** Null for automatic rejections: rejected reports never become pets. */
     petId: string | null
+    /** Set when the decision is about a sighting of `petId` (rejected sightings are never stored). */
+    sightingId: string | null
     source: ModerationSource
     decision: ModerationDecision
     scores: ModerationScores | null
@@ -68,10 +70,13 @@ export const DEFAULT_MODERATION_THRESHOLDS: ModerationThresholds = {
  */
 export function decideModeration(
     scores: ModerationScores | null,
-    thresholds: ModerationThresholds = DEFAULT_MODERATION_THRESHOLDS
+    thresholds: ModerationThresholds = DEFAULT_MODERATION_THRESHOLDS,
+    { hasImages = true }: { hasImages?: boolean } = {}
 ): ModerationDecision {
     if (!scores) return 'pending_review'
-    const { isPetReport, showsAnimal, inappropriate } = scores
+    const { isPetReport, inappropriate } = scores
+    // Sightings may come without photos: then there is nothing for "shows an animal" to judge.
+    const showsAnimal = hasImages ? scores.showsAnimal : 1
 
     if (inappropriate !== null && inappropriate >= thresholds.rejectInappropriate) return 'rejected'
     if (isPetReport !== null && isPetReport < thresholds.rejectIsPetReport) return 'rejected'

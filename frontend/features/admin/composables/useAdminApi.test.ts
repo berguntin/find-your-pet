@@ -52,4 +52,16 @@ describe('useAdminApi', () => {
         expect(fetcher).toHaveBeenNthCalledWith(1, '/api/v1/admin/stats', { query: { days: 7 } })
         expect(fetcher).toHaveBeenNthCalledWith(2, '/api/v1/admin/moderation', { query: { days: 90 } })
     })
+
+    it('lists and moderates sightings', async () => {
+        const api = useAdminApi()
+        await api.listSightings('pending_review')
+        await api.moderateSighting(ID, 'approved')
+
+        expect(fetcher).toHaveBeenNthCalledWith(1, '/api/v1/admin/sightings', { query: { status: 'pending_review' } })
+        expect(fetcher).toHaveBeenNthCalledWith(2, `/api/v1/admin/sightings/${ID}/moderation`, {
+            method: 'PATCH',
+            body: { status: 'approved' }
+        })
+    })
 })

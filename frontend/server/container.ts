@@ -30,6 +30,7 @@ import {
 import { PostgresModerationLog } from './modules/pets/infrastructure/PostgresModerationLog'
 import { PostgresPetEmbeddingIndex } from './modules/pets/infrastructure/PostgresPetEmbeddingIndex'
 import { PostgresPetRepository } from './modules/pets/infrastructure/PostgresPetRepository'
+import { PostgresSightingRepository } from './modules/pets/infrastructure/PostgresSightingRepository'
 import { createUsersModule, type UsersModule } from './modules/users'
 import { PostgresUserRepository } from './modules/users/infrastructure/PostgresUserRepository'
 
@@ -65,6 +66,9 @@ function buildContainer(): Container {
     const userRepository = new PostgresUserRepository(sql)
     const pets = createPetsModule({
         pets: new PostgresPetRepository(sql),
+        sightings: new PostgresSightingRepository(sql),
+        // Authors' first names come from the users module.
+        authors: userRepository,
         images: new CloudinaryImageStorage(config.cloudinary, clock),
         describer: openai ? new OpenAIPetDescriber(openai, config.openai.describerModel) : new DisabledPetDescriber(),
         moderator: openai

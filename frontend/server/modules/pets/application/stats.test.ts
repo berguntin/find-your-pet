@@ -104,6 +104,7 @@ describe('GetModerationOverview', () => {
         log.record({
             id: `decision-${++counter}`,
             petId: null,
+            sightingId: null,
             source: 'automatic',
             decision: 'approved',
             scores: { isPetReport: 0.9, showsAnimal: 0.9, inappropriate: 0 },

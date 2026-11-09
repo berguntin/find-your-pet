@@ -99,6 +99,8 @@ export interface PetStatsDto {
 export interface ModerationDecisionDto {
     id: string
     petId: string | null
+    /** Set when the decision was about a sighting of `petId`. */
+    sightingId: string | null
     source: 'automatic' | 'admin'
     decision: 'approved' | 'pending_review' | 'rejected'
     scores: ModerationScoresDto | null

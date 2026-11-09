@@ -4,6 +4,7 @@ import { ContentRejectedError, ForbiddenError, NotFoundError, ValidationError } 
 import type { ModerationScores } from '../domain/moderation'
 import type { ReportPetData } from '../domain/Pet'
 import { createPetsModule, type PetsModule } from '../index'
+import { InMemorySightingRepository } from '../infrastructure/InMemorySightingRepository'
 import { FakeEmbedder } from '../infrastructure/FakeEmbedder'
 import { InMemoryModerationLog } from '../infrastructure/InMemoryModerationLog'
 import { InMemoryImageStorage } from '../infrastructure/InMemoryImageStorage'
@@ -55,6 +56,8 @@ describe('pet use cases', () => {
         let counter = 0
         now = new Date('2026-10-19T10:00:00Z')
         pets = createPetsModule({
+            sightings: new InMemorySightingRepository(),
+            authors: { displayNames: async () => new Map() },
             pets: repository,
             images,
             describer: { describe: vi.fn().mockResolvedValue(null) },

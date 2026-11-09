@@ -45,6 +45,18 @@ describe('OpenAIDecisionsModerator', () => {
         expect(options).toMatchObject({ timeout: 10_000 })
     })
 
+    it('describes sightings as such, without contact details', async () => {
+        const { moderator, create } = moderatorAnswering([])
+
+        await moderator.review({ ...submission, kind: 'sighting', reportType: 'lost', images: [] })
+
+        const text = create.mock.calls[0]![0].input[0].content[0].text
+        expect(text).toContain('a sighting ("I saw this animal") added to an existing notice of a lost dog')
+        expect(text).toContain('Perro mestizo con collar azul')
+        expect(text).not.toContain('Contact')
+        expect(create.mock.calls[0]![0].input[0].content).toHaveLength(1)
+    })
+
     it('maps answers by name, whatever their order', async () => {
         const { moderator } = moderatorAnswering([
             predicate('inappropriate', 0.02),

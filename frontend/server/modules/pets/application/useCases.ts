@@ -17,8 +17,10 @@ import type {
     PetDescription,
     PetRepository,
     PetSearchCriteria,
+    SightingRepository,
     UploadAuthorization
 } from './ports'
+import type { SharedImageGuard } from './sharedImages'
 
 /** Images sent to the moderator are scaled down to this size to save tokens. */
 const MODERATION_IMAGE_SIZE = 768
@@ -32,7 +34,7 @@ const MAX_LOGGED_ERROR_LENGTH = 500
 export class ReportPet {
     constructor(
         private readonly pets: PetRepository,
-        private readonly images: ImageStorage,
+        private readonly images: SharedImageGuard,
         private readonly moderator: ContentModerator,
         private readonly thresholds: ModerationThresholds,
         private readonly log: ModerationLog,
@@ -45,6 +47,10 @@ export class ReportPet {
         const foreign = data.images.filter(url => !this.images.isManagedUrl(url))
         if (foreign.length > 0) {
             throw new ValidationError('Images must be uploaded through the app', { field: 'images' })
+        }
+        // Someone else's photo would keep living under this report after its family deletes theirs.
+        if ((await this.images.alreadyUsed(data.images)).length > 0) {
+            throw new ValidationError('Images must be new uploads', { field: 'images' })
         }
 
         const pet = Pet.report(data, {
@@ -106,6 +112,7 @@ export class ReportPet {
             .record({
                 id: this.ids.next(),
                 petId,
+                sightingId: null,
                 source: 'automatic',
                 decision,
                 scores,
@@ -169,7 +176,7 @@ export type PetUpdate = Partial<ReportPetData> & { resolution?: Resolution }
 export class UpdatePet {
     constructor(
         private readonly pets: PetRepository,
-        private readonly images: ImageStorage,
+        private readonly images: SharedImageGuard,
         private readonly clock: Clock,
         private readonly reportError: ErrorReporter
     ) {}
@@ -180,6 +187,9 @@ export class UpdatePet {
         const added = (changes.images ?? []).filter(url => !before.includes(url))
         if (added.some(url => !this.images.isManagedUrl(url))) {
             throw new ValidationError('Images must be uploaded through the app', { field: 'images' })
+        }
+        if ((await this.images.alreadyUsed(added)).length > 0) {
+            throw new ValidationError('Images must be new uploads', { field: 'images' })
         }
 
         const now = this.clock.now()
@@ -254,6 +264,7 @@ export class ModeratePet {
             .record({
                 id: this.ids.next(),
                 petId: pet.id,
+                sightingId: null,
                 source: 'admin',
                 decision,
                 scores: null,
@@ -275,6 +286,7 @@ export class ModeratePet {
 export class CleanUpOrphanImages {
     constructor(
         private readonly pets: PetRepository,
+        private readonly sightings: Pick<SightingRepository, 'listAllImageUrls'>,
         private readonly images: ImageStorage,
         private readonly clock: Clock
     ) {}
@@ -284,7 +296,11 @@ export class CleanUpOrphanImages {
         const cutoff = new Date(this.clock.now().getTime() - minAgeHours * 60 * 60 * 1000)
 
         const uploaded = await this.images.listUploadedBefore(cutoff)
-        const referenced = new Set((await this.pets.listAllImageUrls()).map(url => this.images.imageKey(url)))
+        const [petImages, sightingImages] = await Promise.all([
+            this.pets.listAllImageUrls(),
+            this.sightings.listAllImageUrls()
+        ])
+        const referenced = new Set([...petImages, ...sightingImages].map(url => this.images.imageKey(url)))
         const orphans = uploaded
             .filter(url => {
                 const key = this.images.imageKey(url)
