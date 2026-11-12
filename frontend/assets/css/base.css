@@ -1,4 +1,23 @@
 @layer base {
+    /* Colours outside the daisyUI palette, as RGB channels. */
+    :root,
+    [data-theme='mascotas'] {
+        --surface: 255 255 255;
+        --muted: 107 86 70;
+    }
+
+    @media (prefers-color-scheme: dark) {
+        :root:not([data-theme]) {
+            --surface: 42 32 25;
+            --muted: 201 180 162;
+        }
+    }
+
+    [data-theme='mascotas-dark'] {
+        --surface: 42 32 25;
+        --muted: 201 180 162;
+    }
+
     html {
         @apply bg-base-100 text-base-content antialiased;
     }
@@ -17,13 +36,13 @@
 }
 
 @layer components {
-    /* Muted secondary text that still meets contrast on cream backgrounds. */
+    /* Muted secondary text that still meets contrast on every theme's backgrounds. */
     .text-muted {
-        color: #6b5646;
+        color: rgb(var(--muted));
     }
 
     .surface {
-        @apply bg-white rounded-box shadow-sm ring-1 ring-base-300/60;
+        @apply bg-surface rounded-box shadow-sm ring-1 ring-base-300/60;
     }
 
     .status-badge {

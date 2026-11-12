@@ -46,11 +46,12 @@ Para revisar automáticamente avisos y avistamientos, su texto y una versión re
 
 ## 7. Uso de cookies
 
-Este Sitio no utiliza cookies de seguimiento ni de publicidad. Solo usa cookies técnicas, necesarias para su funcionamiento:
+Este Sitio no utiliza cookies de seguimiento ni de publicidad. Solo usa cookies técnicas, necesarias para su funcionamiento, y de preferencia, que recuerdan opciones que tú eliges:
 
 -   `nuxt-session`: cookie de sesión cifrada que te mantiene identificado durante un máximo de 7 días después de entrar. Si no has iniciado sesión puede crearse igualmente, pero vacía, sin ningún dato tuyo.
 -   `auth_return_to`: cookie temporal (10 minutos) que recuerda a qué página volver tras entrar con Google.
 -   `i18n_redirected`: recuerda el idioma en que ves el Sitio.
+-   `theme`: recuerda si has elegido el tema claro u oscuro (un año). Solo se crea si eliges un tema manualmente; con el tema del sistema no se guarda.
 
 ## 8. Derechos de los usuarios
 

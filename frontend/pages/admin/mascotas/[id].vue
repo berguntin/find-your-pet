@@ -184,7 +184,7 @@
                         </li>
                         <li v-if="photos.length < PET_LIMITS.maxImages" class="aspect-square">
                             <label
-                                class="flex h-full cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-base-300 bg-white text-center text-xs hover:border-primary/60"
+                                class="flex h-full cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-base-300 bg-surface text-center text-xs hover:border-primary/60"
                             >
                                 <Icon name="mdi:camera-plus-outline" size="1.5rem" class="text-primary" />
                                 {{ $t('add_photos') }}
@@ -204,14 +204,14 @@
                 <div class="grid gap-4 sm:grid-cols-2">
                     <label class="form-control">
                         <span class="label-text mb-1 font-bold">{{ $t('admin_report_type') }}</span>
-                        <select v-model="form.reportType" class="select select-bordered bg-white">
+                        <select v-model="form.reportType" class="select select-bordered bg-surface">
                             <option value="lost">{{ $t('status_lost') }}</option>
                             <option value="found">{{ $t('status_found') }}</option>
                         </select>
                     </label>
                     <label class="form-control">
                         <span class="label-text mb-1 font-bold">{{ $t('species_label') }}</span>
-                        <select v-model="form.species" class="select select-bordered bg-white">
+                        <select v-model="form.species" class="select select-bordered bg-surface">
                             <option value="dog">{{ $t('dog') }}</option>
                             <option value="cat">{{ $t('cat') }}</option>
                             <option value="other">{{ $t('other') }}</option>
@@ -223,7 +223,7 @@
                             v-model="form.name"
                             type="text"
                             :maxlength="PET_LIMITS.nameMaxLength"
-                            class="input input-bordered bg-white"
+                            class="input input-bordered bg-surface"
                         />
                     </label>
                     <label class="form-control">
@@ -233,7 +233,7 @@
                             type="date"
                             required
                             :max="today"
-                            class="input input-bordered bg-white"
+                            class="input input-bordered bg-surface"
                         />
                     </label>
                     <label class="form-control sm:col-span-2">
@@ -243,7 +243,7 @@
                             required
                             rows="5"
                             :maxlength="PET_LIMITS.descriptionMaxLength"
-                            class="textarea textarea-bordered rounded-2xl bg-white text-base"
+                            class="textarea textarea-bordered rounded-2xl bg-surface text-base"
                         />
                     </label>
                     <label class="form-control">
@@ -253,7 +253,7 @@
                             type="text"
                             required
                             :maxlength="PET_LIMITS.locationMaxLength"
-                            class="input input-bordered bg-white"
+                            class="input input-bordered bg-surface"
                         />
                     </label>
                     <label class="form-control">
@@ -263,7 +263,7 @@
                             type="text"
                             required
                             :maxlength="PET_LIMITS.contactMaxLength"
-                            class="input input-bordered bg-white"
+                            class="input input-bordered bg-surface"
                         />
                     </label>
                     <label v-if="form.reportType === 'found'" class="label cursor-pointer justify-start gap-3">
@@ -284,7 +284,7 @@
                 </div>
 
                 <div v-if="saveError" class="alert alert-error" role="alert">{{ $t(saveError) }}</div>
-                <div v-else-if="saved" class="alert alert-success text-white" role="status">
+                <div v-else-if="saved" class="alert alert-success" role="status">
                     {{ $t('admin_saved') }}
                 </div>
 
@@ -306,7 +306,7 @@
                     <button
                         v-if="pet.moderationStatus === 'pending_review'"
                         type="button"
-                        class="btn btn-success w-full text-white"
+                        class="btn btn-success w-full"
                         :disabled="moderating"
                         @click="moderate('approved')"
                     >

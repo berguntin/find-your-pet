@@ -16,11 +16,10 @@ export default defineNuxtConfig({
     app: {
         head: {
             title: 'Mascotas Encontradas',
-            htmlAttrs: { 'data-theme': 'mascotas' },
+            // data-theme and theme-color depend on the visitor's preference: see app.vue.
             meta: [
                 { charset: 'utf-8' },
-                { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-                { name: 'theme-color', content: '#FFFBF5' }
+                { name: 'viewport', content: 'width=device-width, initial-scale=1' }
             ],
             link: [
                 { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },

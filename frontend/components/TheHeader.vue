@@ -13,6 +13,7 @@
             <AppLogo />
 
             <nav class="hidden items-center gap-2 md:flex" :aria-label="$t('main_navigation')">
+                <ThemeSwitch />
                 <LanguageSwitch class="mx-2" />
                 <NuxtLink to="/registrar" class="btn btn-primary btn-sm">
                     <Icon name="mdi:plus" size="1.1rem" />
@@ -48,6 +49,10 @@
                     <div class="flex items-center justify-between px-4 py-2">
                         <span class="text-sm text-muted">{{ $t('language') }}</span>
                         <LanguageSwitch />
+                    </div>
+                    <div class="flex items-center justify-between px-4 py-2">
+                        <span class="text-sm text-muted">{{ $t('theme') }}</span>
+                        <ThemeSwitch />
                     </div>
                 </nav>
             </div>
