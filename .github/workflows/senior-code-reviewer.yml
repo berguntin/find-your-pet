@@ -51,12 +51,13 @@ jobs:
             (a throwaway file, never committed) and post it as a comment on the PR:
             gh pr comment ${{ github.event.pull_request.number }} --body-file review.md
           # Writing to /tmp was denied in CI even with Write(//tmp/**), so the report goes into the
-          # workspace, which acceptEdits allows. The token cannot push (contents: read).
+          # workspace. acceptEdits allows writing any file in the checkout (not just review.md); it is a
+          # throwaway runner checkout and the token cannot push (contents: read).
           # "cd *" lets the reviewer run "cd frontend && npm run ..." (the app lives in frontend/); the
           # read-only utilities avoid denials while it explores.
           claude_args: |
             --permission-mode acceptEdits
-            --allowedTools "Skill(senior-code-reviewer),Bash(cd *),Bash(git *),Bash(npm run *),Bash(npm test *),Bash(npx *),Bash(node *),Bash(ls *),Bash(cat *),Bash(head *),Bash(tail *),Bash(grep *),Bash(wc *),Bash(which *),Bash(mkdir -p /tmp/*),Bash(gh pr comment *),Write(review.md)"
+            --allowedTools "Skill(senior-code-reviewer),Bash(cd *),Bash(git *),Bash(npm run *),Bash(npm test *),Bash(npx *),Bash(node *),Bash(ls *),Bash(cat *),Bash(head *),Bash(tail *),Bash(grep *),Bash(wc *),Bash(which *),Bash(gh pr comment *)"
 
       # The action hides the agent's output; list the denied tool calls so missing permissions are visible.
       - name: Show denied tool calls
