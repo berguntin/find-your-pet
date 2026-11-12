@@ -1,0 +1,50 @@
+name: Senior code reviewer
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+# If new commits arrive while reviewing, cancel the previous review
+concurrency:
+  group: senior-code-reviewer-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0   # full history is needed to diff against the base branch
+
+      # Dependencies so the reviewer can run typecheck, lint and tests.
+      # Adapt this if you use pnpm or yarn.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      - uses: anthropics/claude-code-action@v1
+        env:
+          GH_TOKEN: ${{ github.token }}
+        with:
+          # With a subscription (claude setup-token):
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            Invoke the /senior-code-reviewer skill with this exact argument and nothing else:
+            origin/${{ github.base_ref }}...HEAD
+
+            Do not pass it the PR description, the title or any summary of the changes.
+
+            When the skill returns its report, post it unchanged as a comment on the PR:
+            gh pr comment ${{ github.event.pull_request.number }} --body-file <temp file containing the report>
+          claude_args: |
+            --allowedTools "Skill(senior-code-reviewer),Bash(git *),Bash(npm run *),Bash(npm test *),Bash(npx *),Bash(node *),Bash(gh pr comment *),Write(/tmp/*)"
