@@ -192,7 +192,7 @@
                                         </span>
                                         <span
                                             v-if="decision.error"
-                                            class="max-w-48 truncate text-xs text-lost"
+                                            class="max-w-48 truncate text-xs text-error"
                                             :title="decision.error"
                                         >
                                             {{ $t('admin_moderator_failed') }}: {{ decision.error }}

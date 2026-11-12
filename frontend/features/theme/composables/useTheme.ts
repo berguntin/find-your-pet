@@ -1,5 +1,5 @@
 import { computed } from 'vue'
-import { parseThemePreference, THEME_COOKIE, themeCookieValueFor, type ThemePreference } from '~/utils/theme'
+import { parseThemePreference, THEME_COOKIE, themeCookieValueFor, type ThemePreference } from '../utils/theme'
 
 const ONE_YEAR = 60 * 60 * 24 * 365
 

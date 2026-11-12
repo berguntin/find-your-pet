@@ -35,10 +35,14 @@ export type ThemeColorMeta = {
     media?: string
 }
 
+/**
+ * Always the same two tags (one per OS scheme), only their colour changes. unhead patches
+ * meta tags in place and would leave a stale `media` behind if the shape changed on the client.
+ */
 export function themeColorMetaFor(preference: ThemePreference): ThemeColorMeta[] {
-    if (preference !== 'system') return [{ name: 'theme-color', content: THEME_COLORS[preference] }]
+    const colorFor = (scheme: 'light' | 'dark') => THEME_COLORS[preference === 'system' ? scheme : preference]
     return [
-        { name: 'theme-color', content: THEME_COLORS.light, media: '(prefers-color-scheme: light)' },
-        { name: 'theme-color', content: THEME_COLORS.dark, media: '(prefers-color-scheme: dark)' }
+        { name: 'theme-color', content: colorFor('light'), media: '(prefers-color-scheme: light)' },
+        { name: 'theme-color', content: colorFor('dark'), media: '(prefers-color-scheme: dark)' }
     ]
 }

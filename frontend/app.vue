@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Analytics } from '@vercel/analytics/nuxt'
-import { dataThemeFor, themeColorMetaFor } from '~/utils/theme'
+import { dataThemeFor, themeColorMetaFor } from '~/features/theme/utils/theme'
 
 const { preference } = useTheme()
 useHead(

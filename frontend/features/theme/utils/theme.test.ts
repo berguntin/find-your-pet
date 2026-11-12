@@ -39,14 +39,17 @@ describe('dataThemeFor', () => {
 })
 
 describe('themeColorMetaFor', () => {
-    it('uses a single colour for an explicit choice', () => {
-        expect(themeColorMetaFor('dark')).toEqual([{ name: 'theme-color', content: '#1C1511' }])
+    const meta = (light: string, dark: string) => [
+        { name: 'theme-color', content: light, media: '(prefers-color-scheme: light)' },
+        { name: 'theme-color', content: dark, media: '(prefers-color-scheme: dark)' }
+    ]
+
+    it('follows the OS scheme when following the system', () => {
+        expect(themeColorMetaFor('system')).toEqual(meta('#FFFBF5', '#1C1511'))
     })
 
-    it('offers both colours by media query when following the system', () => {
-        expect(themeColorMetaFor('system').map(meta => meta.media)).toEqual([
-            '(prefers-color-scheme: light)',
-            '(prefers-color-scheme: dark)'
-        ])
+    it('keeps the same two tags with the chosen colour for an explicit choice', () => {
+        expect(themeColorMetaFor('light')).toEqual(meta('#FFFBF5', '#FFFBF5'))
+        expect(themeColorMetaFor('dark')).toEqual(meta('#1C1511', '#1C1511'))
     })
 })
