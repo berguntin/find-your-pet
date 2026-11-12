@@ -35,6 +35,7 @@ jobs:
         working-directory: frontend
 
       - uses: anthropics/claude-code-action@v1
+        id: claude
         env:
           GH_TOKEN: ${{ github.token }}
         with:
@@ -46,7 +47,16 @@ jobs:
 
             Do not pass it the PR description, the title or any summary of the changes.
 
-            When the skill returns its report, post it unchanged as a comment on the PR:
-            gh pr comment ${{ github.event.pull_request.number }} --body-file <temp file containing the report>
+            When the skill returns its report, write it unchanged to /tmp/review.md and post it as a comment on the PR:
+            gh pr comment ${{ github.event.pull_request.number }} --body-file /tmp/review.md
+          # Permission rules: "//tmp/**" is the absolute /tmp ("/tmp/*" would be relative to the repo).
+          # "cd *" lets the reviewer run "cd frontend && npm run ..." (the app lives in frontend/).
           claude_args: |
-            --allowedTools "Skill(senior-code-reviewer),Bash(git *),Bash(npm run *),Bash(npm test *),Bash(npx *),Bash(node *),Bash(gh pr comment *),Write(/tmp/*)"
+            --allowedTools "Skill(senior-code-reviewer),Bash(cd *),Bash(git *),Bash(npm run *),Bash(npm test *),Bash(npx *),Bash(node *),Bash(gh pr comment *),Write(//tmp/**)"
+
+      # The action hides the agent's output; list the denied tool calls so missing permissions are visible.
+      - name: Show denied tool calls
+        if: always() && steps.claude.outputs.execution_file != ''
+        run: |
+          jq -c '[.. | objects | select(.type? == "result")] | last | .permission_denials // [] | .[] | {tool: .tool_name, input: .tool_input}' \
+            "${{ steps.claude.outputs.execution_file }}" || true
