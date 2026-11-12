@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { ref, type Ref } from 'vue'
+import { nextTick, ref, type Ref } from 'vue'
 import { THEME_COOKIE_OPTIONS, useTheme } from './useTheme'
 
 // Like Nuxt: every useCookie call gets its own ref over the same stored value,
@@ -59,6 +59,17 @@ describe('useTheme', () => {
         const headerSwitch = useTheme()
         headerSwitch.preference.value = 'dark'
         expect(app.preference.value).toBe('dark')
+    })
+
+    it('follows a change made in another tab', async () => {
+        const { preference } = useTheme()
+        // Nuxt pushes the other tab's value into this tab's cookie ref.
+        cookieRefs[0]!.value = 'dark'
+        await nextTick()
+        expect(preference.value).toBe('dark')
+        cookieRefs[0]!.value = null
+        await nextTick()
+        expect(preference.value).toBe('system')
     })
 
     it('uses the cookie options stated in the privacy policy', () => {

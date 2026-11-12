@@ -38,7 +38,7 @@
                     </NuxtLink>
                 </nav>
                 <div class="flex items-center gap-2">
-                    <ThemeSwitch class="hidden sm:inline-flex" />
+                    <ThemeSwitch />
                     <NuxtLink
                         to="/"
                         class="btn btn-ghost btn-sm btn-circle"

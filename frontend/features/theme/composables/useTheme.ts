@@ -1,4 +1,4 @@
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
 import { parseThemePreference, THEME_COOKIE, themeCookieValueFor, type ThemePreference } from '../utils/theme'
 
 const ONE_YEAR = 60 * 60 * 24 * 365
@@ -14,6 +14,11 @@ export const THEME_COOKIE_OPTIONS = { maxAge: ONE_YEAR, sameSite: 'lax', path: '
 export function useTheme() {
     const cookie = useCookie<string | null>(THEME_COOKIE, THEME_COOKIE_OPTIONS)
     const state = useState<ThemePreference>('theme-preference', () => parseThemePreference(cookie.value))
+
+    // Nuxt updates the cookie ref when another tab changes it: follow it so this tab matches.
+    watch(cookie, value => {
+        state.value = parseThemePreference(value)
+    })
 
     const preference = computed<ThemePreference>({
         get: () => state.value,
