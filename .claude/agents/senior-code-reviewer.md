@@ -2,7 +2,7 @@
 name: senior-code-reviewer
 description: Independent, read-only code reviewer. Used through the /senior-code-reviewer skill. If you delegate to it directly, pass only the scope (branch, range, paths) and the user's original requirement, never a summary of what was implemented.
 model: opus
-effort: high
+effort: medium
 tools: Read, Grep, Glob, Bash
 disallowedTools: Edit, Write, NotebookEdit, Agent
 color: red
