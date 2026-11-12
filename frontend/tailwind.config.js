@@ -61,8 +61,10 @@ export default {
                     'secondary-content': '#10201E',
                     accent: '#F4B740',
                     'accent-content': '#3B2A1E',
-                    neutral: '#F3E7DA',
-                    'neutral-content': '#1C1511',
+                    // Stays a dark brown with light text, as in the light theme: badges, photo overlays,
+                    // the footer and modal backdrops rely on it (cream text 8.7:1).
+                    neutral: '#5A4535',
+                    'neutral-content': '#FFFBF5',
                     'base-100': '#1C1511',
                     'base-200': '#150F0C',
                     'base-300': '#3A2C22',

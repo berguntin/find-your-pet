@@ -15,8 +15,8 @@
     const moderation = computed(() => data.value?.[1])
 
     const series = computed<ChartSeries[]>(() => [
-        { key: 'lost', label: t('admin_series_lost'), color: '#B42318' },
-        { key: 'found', label: t('admin_series_found'), color: '#1F7A4D' }
+        { key: 'lost', label: t('admin_series_lost'), color: 'rgb(var(--chart-lost))' },
+        { key: 'found', label: t('admin_series_found'), color: 'rgb(var(--chart-found))' }
     ])
     const species = ['dog', 'cat', 'other'] as const
     const lostTotal = computed(() => stats.value?.period.lost ?? 0)

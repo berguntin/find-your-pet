@@ -19,9 +19,9 @@
     // Approved / review / rejected: validated together for colour blindness; review is the darker amber
     // so it stays visible on the cream surface.
     const series = computed<ChartSeries[]>(() => [
-        { key: 'approved', label: t('admin_status_approved'), color: '#1F7A4D' },
-        { key: 'pendingReview', label: t('admin_status_pending_review'), color: '#C98500' },
-        { key: 'rejected', label: t('admin_status_rejected'), color: '#B42318' }
+        { key: 'approved', label: t('admin_status_approved'), color: 'rgb(var(--chart-found))' },
+        { key: 'pendingReview', label: t('admin_status_pending_review'), color: 'rgb(var(--chart-pending))' },
+        { key: 'rejected', label: t('admin_status_rejected'), color: 'rgb(var(--chart-lost))' }
     ])
 
     const thresholds = computed(() => {

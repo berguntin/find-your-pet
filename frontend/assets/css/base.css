@@ -4,18 +4,28 @@
     [data-theme='mascotas'] {
         --surface: 255 255 255;
         --muted: 107 86 70;
+        /* Admin chart series: at least 3:1 against the theme's backgrounds. */
+        --chart-lost: 180 35 24;
+        --chart-found: 31 122 77;
+        --chart-pending: 201 133 0;
     }
 
     @media (prefers-color-scheme: dark) {
         :root:not([data-theme]) {
             --surface: 42 32 25;
             --muted: 201 180 162;
+            --chart-lost: 244 122 110;
+            --chart-found: 92 203 149;
+            --chart-pending: 244 183 64;
         }
     }
 
     [data-theme='mascotas-dark'] {
         --surface: 42 32 25;
         --muted: 201 180 162;
+        --chart-lost: 244 122 110;
+        --chart-found: 92 203 149;
+        --chart-pending: 244 183 64;
     }
 
     html {
