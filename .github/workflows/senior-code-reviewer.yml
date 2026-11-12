@@ -25,12 +25,14 @@ jobs:
           fetch-depth: 0   # full history is needed to diff against the base branch
 
       # Dependencies so the reviewer can run typecheck, lint and tests.
-      # Adapt this if you use pnpm or yarn.
+      # The app (and its lock file) lives in frontend/, not at the repo root.
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
+          cache-dependency-path: frontend/package-lock.json
       - run: npm ci
+        working-directory: frontend
 
       - uses: anthropics/claude-code-action@v1
         env:
