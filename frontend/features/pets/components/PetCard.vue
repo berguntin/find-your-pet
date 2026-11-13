@@ -25,14 +25,14 @@
             />
             <div
                 v-if="!pet.alive"
-                class="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-neutral/50 text-sm font-semibold text-neutral-content"
+                class="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-ink/50 text-sm font-semibold text-ink-content"
             >
                 <Icon name="mdi:eye-off-outline" size="1.5rem" />
                 {{ $t('sensible_content') }}
             </div>
             <div class="absolute left-3 top-3 flex flex-wrap gap-2">
                 <PetStatusBadge :pet="pet" />
-                <span v-if="!pet.alive" class="status-badge bg-neutral">{{ $t('deceased') }}</span>
+                <span v-if="!pet.alive" class="status-badge bg-ink">{{ $t('deceased') }}</span>
             </div>
             <span
                 v-if="match !== undefined"
@@ -42,7 +42,7 @@
             </span>
             <span
                 v-if="pet.images.length > 1"
-                class="absolute bottom-3 right-3 flex items-center gap-1 rounded-full bg-neutral/70 px-2 py-0.5 text-xs text-neutral-content"
+                class="absolute bottom-3 right-3 flex items-center gap-1 rounded-full bg-ink/70 px-2 py-0.5 text-xs text-ink-content"
             >
                 <Icon name="mdi:image-multiple-outline" size="0.9rem" /> {{ pet.images.length }}
             </span>

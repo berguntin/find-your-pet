@@ -192,7 +192,7 @@
                         <button
                             v-if="pet.moderationStatus === 'pending_review'"
                             type="button"
-                            class="btn btn-success btn-sm text-white"
+                            class="btn btn-success btn-sm"
                             :disabled="busy === pet.id"
                             @click="moderate(pet, 'approved')"
                         >

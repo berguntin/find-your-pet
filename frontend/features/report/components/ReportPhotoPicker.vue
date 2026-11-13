@@ -22,7 +22,7 @@
         <p class="mb-3 text-sm text-muted">{{ $t('photos_hint', { max }) }}</p>
         <label
             class="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-box border-2 border-dashed px-6 py-10 text-center transition"
-            :class="dragging ? 'border-primary bg-primary/5' : 'border-base-300 bg-white hover:border-primary/60'"
+            :class="dragging ? 'border-primary bg-primary/5' : 'border-field-border bg-surface hover:border-primary/60'"
             @dragover.prevent="dragging = true"
             @dragleave.prevent="dragging = false"
             @drop.prevent="onDrop"
@@ -54,7 +54,7 @@
                 </button>
                 <span
                     class="pointer-events-none absolute bottom-1 left-1 flex items-center gap-1 rounded-full px-2 text-xs"
-                    :class="index === 0 ? 'bg-primary text-primary-content' : 'bg-neutral/60 text-neutral-content'"
+                    :class="index === 0 ? 'bg-primary text-primary-content' : 'bg-ink/60 text-ink-content'"
                 >
                     <Icon :name="index === 0 ? 'mdi:star' : 'mdi:star-outline'" />
                     <template v-if="index === 0">{{ $t('main_photo') }}</template>

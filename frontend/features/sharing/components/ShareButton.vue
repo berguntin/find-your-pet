@@ -75,7 +75,7 @@
         </button>
         <Teleport to="body">
             <transition name="fade">
-                <div v-if="isActive" class="fixed inset-0 z-50 flex items-center justify-center bg-neutral/40">
+                <div v-if="isActive" class="fixed inset-0 z-50 flex items-center justify-center bg-ink/40">
                     <div
                         ref="popupRef"
                         class="bg-base-100 border border-base-content/20 text-base-content shadow-xl rounded-lg p-8 max-w-sm w-full mx-4 relative"

@@ -14,6 +14,7 @@
 
             <nav class="hidden items-center gap-2 md:flex" :aria-label="$t('main_navigation')">
                 <LanguageSwitch class="mx-2" />
+                <ThemeToggle />
                 <NuxtLink to="/registrar" class="btn btn-primary btn-sm">
                     <Icon name="mdi:plus" size="1.1rem" />
                     {{ $t('publish_report') }}
@@ -48,6 +49,10 @@
                     <div class="flex items-center justify-between px-4 py-2">
                         <span class="text-sm text-muted">{{ $t('language') }}</span>
                         <LanguageSwitch />
+                    </div>
+                    <div class="flex items-center justify-between px-4 py-2">
+                        <span class="text-sm text-muted">{{ $t('theme') }}</span>
+                        <ThemeToggle />
                     </div>
                 </nav>
             </div>

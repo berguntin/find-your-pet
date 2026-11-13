@@ -37,7 +37,7 @@
             <section class="flex flex-col gap-5">
                 <div class="flex flex-wrap gap-2">
                     <PetStatusBadge :pet="pet" />
-                    <span v-if="!pet.alive" class="status-badge bg-neutral">{{ $t('deceased') }}</span>
+                    <span v-if="!pet.alive" class="status-badge bg-ink">{{ $t('deceased') }}</span>
                 </div>
                 <h1>{{ title }}</h1>
 
