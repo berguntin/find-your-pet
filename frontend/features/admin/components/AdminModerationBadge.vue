@@ -2,13 +2,21 @@
     const props = defineProps<{ status: 'approved' | 'pending_review' | 'rejected' }>()
 
     const styles = {
-        approved: { class: 'bg-found/10 text-found', icon: 'mdi:check-circle', label: 'admin_status_approved' },
+        approved: {
+            class: 'bg-found-accent/10 text-found-accent',
+            icon: 'mdi:check-circle',
+            label: 'admin_status_approved'
+        },
         pending_review: {
             class: 'bg-warning/30 text-base-content',
             icon: 'mdi:clock-outline',
             label: 'admin_status_pending_review'
         },
-        rejected: { class: 'bg-lost/10 text-lost', icon: 'mdi:close-circle', label: 'admin_status_rejected' }
+        rejected: {
+            class: 'bg-lost-accent/10 text-lost-accent',
+            icon: 'mdi:close-circle',
+            label: 'admin_status_rejected'
+        }
     } as const
     const style = computed(() => styles[props.status])
 </script>

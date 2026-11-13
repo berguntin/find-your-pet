@@ -17,13 +17,16 @@
 }
 
 @layer components {
-    /* Muted secondary text that still meets contrast on cream backgrounds. */
-    .text-muted {
-        color: #6b5646;
+    /* Raised cards. text-muted, bg-surface and border-field-border come from the theme (features/theme/palettes.ts). */
+    .surface {
+        @apply bg-surface rounded-box shadow-sm ring-1 ring-base-300/60;
     }
 
-    .surface {
-        @apply bg-white rounded-box shadow-sm ring-1 ring-base-300/60;
+    /* Form field borders keep 3:1 against the page in both themes (WCAG 1.4.11). */
+    .input-bordered,
+    .select-bordered,
+    .textarea-bordered {
+        @apply border-field-border;
     }
 
     .status-badge {

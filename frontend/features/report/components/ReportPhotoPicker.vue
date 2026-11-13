@@ -22,7 +22,7 @@
         <p class="mb-3 text-sm text-muted">{{ $t('photos_hint', { max }) }}</p>
         <label
             class="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-box border-2 border-dashed px-6 py-10 text-center transition"
-            :class="dragging ? 'border-primary bg-primary/5' : 'border-base-300 bg-white hover:border-primary/60'"
+            :class="dragging ? 'border-primary bg-primary/5' : 'border-field-border bg-surface hover:border-primary/60'"
             @dragover.prevent="dragging = true"
             @dragleave.prevent="dragging = false"
             @drop.prevent="onDrop"

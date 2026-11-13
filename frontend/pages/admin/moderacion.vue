@@ -16,12 +16,12 @@
         watch: [days]
     })
 
-    // Approved / review / rejected: validated together for colour blindness; review is the darker amber
-    // so it stays visible on the cream surface.
+    // Approved / review / rejected: validated together for colour blindness. Theme colours (features/theme/palettes.ts),
+    // each at least 3:1 against the surface in light and dark mode.
     const series = computed<ChartSeries[]>(() => [
-        { key: 'approved', label: t('admin_status_approved'), color: '#1F7A4D' },
-        { key: 'pendingReview', label: t('admin_status_pending_review'), color: '#C98500' },
-        { key: 'rejected', label: t('admin_status_rejected'), color: '#B42318' }
+        { key: 'approved', label: t('admin_status_approved'), color: 'rgb(var(--color-found-accent))' },
+        { key: 'pendingReview', label: t('admin_status_pending_review'), color: 'rgb(var(--color-pending-accent))' },
+        { key: 'rejected', label: t('admin_status_rejected'), color: 'rgb(var(--color-lost-accent))' }
     ])
 
     const thresholds = computed(() => {
@@ -192,7 +192,7 @@
                                         </span>
                                         <span
                                             v-if="decision.error"
-                                            class="max-w-48 truncate text-xs text-lost"
+                                            class="max-w-48 truncate text-xs text-lost-accent"
                                             :title="decision.error"
                                         >
                                             {{ $t('admin_moderator_failed') }}: {{ decision.error }}

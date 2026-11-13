@@ -198,7 +198,7 @@
                             :class="
                                 form.species === option.value
                                     ? 'btn-neutral'
-                                    : 'btn-ghost bg-white ring-1 ring-base-300'
+                                    : 'btn-ghost bg-surface ring-1 ring-field-border'
                             "
                         >
                             <input v-model="form.species" type="radio" :value="option.value" class="sr-only" />
@@ -248,7 +248,7 @@
                         required
                         rows="4"
                         :maxlength="PET_LIMITS.descriptionMaxLength"
-                        class="textarea textarea-bordered rounded-2xl bg-white text-base"
+                        class="textarea textarea-bordered rounded-2xl bg-surface text-base"
                         :placeholder="$t('description_placeholder')"
                     />
                     <span class="label-text-alt mt-1 text-muted">{{ $t('description_hint') }}</span>
@@ -261,7 +261,7 @@
                             v-model="form.name"
                             type="text"
                             :maxlength="PET_LIMITS.nameMaxLength"
-                            class="input input-bordered bg-white"
+                            class="input input-bordered bg-surface"
                         />
                     </label>
                     <label class="form-control">
@@ -273,7 +273,7 @@
                             type="date"
                             :max="maxDate"
                             required
-                            class="input input-bordered bg-white"
+                            class="input input-bordered bg-surface"
                         />
                     </label>
                 </div>
@@ -285,7 +285,7 @@
                         type="text"
                         required
                         :maxlength="PET_LIMITS.locationMaxLength"
-                        class="input input-bordered bg-white"
+                        class="input input-bordered bg-surface"
                         :placeholder="$t('location_placeholder')"
                     />
                 </label>
@@ -297,7 +297,7 @@
                             v-for="option in [true, false]"
                             :key="String(option)"
                             class="btn rounded-full"
-                            :class="form.alive === option ? 'btn-neutral' : 'btn-ghost bg-white ring-1 ring-base-300'"
+                            :class="form.alive === option ? 'btn-neutral' : 'btn-ghost bg-surface ring-1 ring-field-border'"
                         >
                             <input v-model="form.alive" type="radio" :value="option" class="sr-only" />
                             {{ option ? $t('yes') : $t('no') }}
@@ -312,7 +312,7 @@
                         type="text"
                         required
                         :maxlength="PET_LIMITS.contactMaxLength"
-                        class="input input-bordered bg-white"
+                        class="input input-bordered bg-surface"
                         :placeholder="$t('contact_placeholder')"
                     />
                     <span class="label-text-alt mt-1 text-muted">{{ $t('contact_public_hint') }}</span>

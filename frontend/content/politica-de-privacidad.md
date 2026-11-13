@@ -51,6 +51,7 @@ Este Sitio no utiliza cookies de seguimiento ni de publicidad. Solo usa cookies 
 -   `nuxt-session`: cookie de sesión cifrada que te mantiene identificado durante un máximo de 7 días después de entrar. Si no has iniciado sesión puede crearse igualmente, pero vacía, sin ningún dato tuyo.
 -   `auth_return_to`: cookie temporal (10 minutos) que recuerda a qué página volver tras entrar con Google.
 -   `i18n_redirected`: recuerda el idioma en que ves el Sitio.
+-   `theme`: solo se crea si eliges a mano el modo claro u oscuro, y recuerda esa elección durante un año. Guarda únicamente `light` o `dark`, sin ningún dato tuyo. Si no existe, el Sitio usa la apariencia que tenga configurada tu dispositivo.
 
 ## 8. Derechos de los usuarios
 

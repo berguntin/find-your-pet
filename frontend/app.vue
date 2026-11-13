@@ -1,9 +1,11 @@
 <script setup>
-import { Analytics } from '@vercel/analytics/nuxt'
+    import { Analytics } from '@vercel/analytics/nuxt'
+
+    useThemeSync()
 </script>
 <template>
     <NuxtLayout>
-        <Analytics/>
+        <Analytics />
         <NuxtPage />
     </NuxtLayout>
 </template>
