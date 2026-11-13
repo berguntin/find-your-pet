@@ -122,7 +122,9 @@ describe('useThemeSync', () => {
         ])
     })
 
-    it('applies a change made in another tab (useCookie syncs the cookie ref)', async () => {
+    // Nuxt's useCookie updates its ref when another tab changes the cookie (cookieStore or BroadcastChannel); here the
+    // ref is changed by hand to check that such an update reaches data-theme.
+    it('applies changes to the cookie ref, as useCookie does when another tab changes it', async () => {
         useThemeSync()
         mount()
 

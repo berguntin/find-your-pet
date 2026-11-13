@@ -20,6 +20,7 @@ describe('readThemeCookie', () => {
 
     it('decodes quoted or encoded values', () => {
         expect(readThemeCookie('theme=%64ark')).toBe('dark')
+        expect(readThemeCookie('theme="dark"')).toBe('dark')
     })
 
     it('returns null when missing or invalid', () => {

@@ -1,5 +1,5 @@
 import plugin from 'tailwindcss/plugin'
-import { daisyThemes, extraVariables, PALETTES } from './features/theme/palettes'
+import { daisyThemes, extraVariables, FIXED_COLORS, PALETTES } from './features/theme/palettes'
 
 /** Extra colours read from CSS variables, so they follow the active theme. */
 const extraColor = name => `rgb(var(--color-${name}) / <alpha-value>)`
@@ -13,10 +13,8 @@ export default {
                 sans: ['Nunito', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif']
             },
             colors: {
-                // Report states. Every pair keeps at least 4.5:1 contrast with white text.
-                lost: '#B42318',
-                found: '#1F7A4D',
-                reunited: '#2F6F6A',
+                // Same in both themes (badges with white text, dark overlays): see FIXED_COLORS.
+                ...FIXED_COLORS,
                 ...Object.fromEntries(Object.keys(PALETTES.light.extra).map(name => [name, extraColor(name)]))
             }
         }

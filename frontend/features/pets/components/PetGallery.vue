@@ -23,7 +23,7 @@
             />
             <div
                 v-if="hidden"
-                class="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-neutral/50 text-neutral-content"
+                class="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-ink/50 text-ink-content"
             >
                 <Icon name="mdi:eye-off-outline" size="2rem" />
                 <p class="font-semibold">{{ $t('sensible_content') }}</p>

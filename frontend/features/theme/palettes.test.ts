@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { extraVariables, hexToRgbChannels, PALETTES, THEME_NAMES, type Palette } from './palettes'
+import { extraVariables, FIXED_COLORS, hexToRgbChannels, PALETTES, THEME_NAMES, type Palette } from './palettes'
 
 /** WCAG 2.x relative luminance. */
 const luminance = (hex: string): number => {
@@ -50,6 +50,17 @@ describe('theme palettes', () => {
         it.each(pairs(PALETTES[name]))('%s keeps contrast (%s on %s ≥ %d:1)', (_, foreground, background, minimum) => {
             expect(contrast(foreground, background)).toBeGreaterThanOrEqual(minimum)
         })
+    })
+
+    // Badges use white text and overlays the ink content colour on every theme.
+    it.each([
+        ['lost badge', '#FFFFFF', FIXED_COLORS.lost],
+        ['found badge', '#FFFFFF', FIXED_COLORS.found],
+        ['reunited badge', '#FFFFFF', FIXED_COLORS.reunited],
+        ['deceased badge', '#FFFFFF', FIXED_COLORS.ink.DEFAULT],
+        ['text on the ink layer', FIXED_COLORS.ink.content, FIXED_COLORS.ink.DEFAULT]
+    ])('fixed colours: %s keeps 4.5:1', (_, foreground, background) => {
+        expect(contrast(foreground, background)).toBeGreaterThanOrEqual(TEXT)
     })
 
     it('exposes the extra colours as rgb channels and sets the native colour scheme', () => {

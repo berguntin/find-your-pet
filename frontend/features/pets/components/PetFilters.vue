@@ -30,7 +30,9 @@
                 type="button"
                 class="btn btn-sm shrink-0 rounded-full"
                 :class="
-                    modelValue.reportType === option.value ? 'btn-neutral' : 'btn-ghost bg-surface ring-1 ring-field-border'
+                    modelValue.reportType === option.value
+                        ? 'btn-neutral'
+                        : 'btn-ghost bg-surface ring-1 ring-field-border'
                 "
                 :aria-pressed="modelValue.reportType === option.value"
                 @click="update({ reportType: option.value })"
@@ -45,7 +47,11 @@
                 :key="option.value"
                 type="button"
                 class="btn btn-sm shrink-0 rounded-full"
-                :class="modelValue.species === option.value ? 'btn-neutral' : 'btn-ghost bg-surface ring-1 ring-field-border'"
+                :class="
+                    modelValue.species === option.value
+                        ? 'btn-neutral'
+                        : 'btn-ghost bg-surface ring-1 ring-field-border'
+                "
                 :aria-pressed="modelValue.species === option.value"
                 @click="update({ species: option.value })"
             >

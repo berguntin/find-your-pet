@@ -1,5 +1,5 @@
 <template>
-    <footer class="mt-16 bg-neutral text-neutral-content">
+    <footer class="mt-16 bg-ink text-ink-content">
         <div class="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:px-6 md:grid-cols-3">
             <div class="space-y-3">
                 <p class="flex items-center gap-2 text-lg font-extrabold">
@@ -36,14 +36,14 @@
                         target="_blank"
                         rel="noopener noreferrer"
                         :aria-label="$t('github_link')"
-                        class="btn btn-circle btn-sm btn-ghost text-neutral-content"
+                        class="btn btn-circle btn-sm btn-ghost text-ink-content"
                     >
                         <Icon name="uil:github" size="1.25rem" />
                     </a>
                 </div>
             </div>
         </div>
-        <div class="border-t border-neutral-content/15">
+        <div class="border-t border-ink-content/15">
             <p class="mx-auto max-w-6xl px-4 py-4 text-xs opacity-70 sm:px-6">
                 &copy; {{ new Date().getFullYear() }} {{ $t('app_name') }}. {{ $t('footer') }}
             </p>

@@ -54,7 +54,7 @@
                 </button>
                 <span
                     class="pointer-events-none absolute bottom-1 left-1 flex items-center gap-1 rounded-full px-2 text-xs"
-                    :class="index === 0 ? 'bg-primary text-primary-content' : 'bg-neutral/60 text-neutral-content'"
+                    :class="index === 0 ? 'bg-primary text-primary-content' : 'bg-ink/60 text-ink-content'"
                 >
                     <Icon :name="index === 0 ? 'mdi:star' : 'mdi:star-outline'" />
                     <template v-if="index === 0">{{ $t('main_photo') }}</template>

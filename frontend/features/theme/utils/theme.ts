@@ -24,7 +24,8 @@ export const safeDecode = (value: string): string | null => {
 export const readThemeCookie = (cookies: string): ThemePreference | null => {
     for (const part of cookies.split(';')) {
         const [name, ...rest] = part.trim().split('=')
-        if (name === THEME_COOKIE) return parseThemePreference(safeDecode(rest.join('=')))
+        // Same as cookie-es (used by useCookie): surrounding double quotes are not part of the value.
+        if (name === THEME_COOKIE) return parseThemePreference(safeDecode(rest.join('=').replace(/^"(.*)"$/, '$1')))
     }
     return null
 }

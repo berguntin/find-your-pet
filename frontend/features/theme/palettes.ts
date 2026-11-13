@@ -54,6 +54,17 @@ export interface Palette {
     browserColor: string
 }
 
+/**
+ * Colours that do not change with the theme: report state badges (white text) and the dark "ink" layer used for the
+ * footer, overlays on photos and modal backdrops, which must stay dark in both themes.
+ */
+export const FIXED_COLORS = {
+    lost: '#B42318',
+    found: '#1F7A4D',
+    reunited: '#2F6F6A',
+    ink: { DEFAULT: '#3B2A1E', content: '#FFFBF5' }
+} as const
+
 const shape = {
     '--rounded-box': '1.25rem',
     '--rounded-btn': '9999px',
