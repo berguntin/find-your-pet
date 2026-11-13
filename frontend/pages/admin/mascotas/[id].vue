@@ -168,7 +168,7 @@
                             </button>
                             <span
                                 v-if="photo.file"
-                                class="pointer-events-none absolute bottom-1 left-1 rounded-full bg-neutral/70 px-2 text-xs text-neutral-content"
+                                class="pointer-events-none absolute bottom-1 left-1 rounded-full bg-ink/70 px-2 text-xs text-ink-content"
                             >
                                 {{ $t('admin_new_photo') }}
                             </span>
