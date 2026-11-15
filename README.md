@@ -149,6 +149,10 @@ Use `docker compose down -v && docker compose up --build` to start from a clean 
 Without Docker, from `frontend/`: start a Postgres, set `NUXT_DATABASE_URL`, then
 `npm install && npm run db:migrate && npm run dev`.
 
+Node 24 and npm 11.16 or newer are required (`frontend/.npmrc` sets `engine-strict`). The same file only resolves package
+versions published at least 7 days ago when resolving (`npm install`/`update`; `npm ci` trusts the lockfile) and rejects
+dependency install scripts that aren't reviewed in `allowScripts` (`package.json`, approvals pinned to exact versions).
+
 ## Scripts (in `frontend/`)
 
 | Script                                                 |                                                                                                                                         |

@@ -13,7 +13,7 @@ API, environment variables and deployment details: [README.md](README.md). Decis
 - **Rate limiting**: Upstash Redis. **Deployment**: Vercel (Hobby) + Supabase. Scheduled jobs on GitHub Actions (`scheduled-jobs.yml`), with Vercel Cron as a fallback.
 - **Admin panel** (`/admin`, Spanish only): Google sign-in with `nuxt-auth-utils` (sealed session cookie), restricted to `NUXT_ADMIN_EMAILS`.
 - UI: Tailwind + daisyUI, `@nuxtjs/i18n` (`es` default, `en`), `@nuxt/content` for legal pages. Validation with zod.
-- Node 24, **npm** (not pnpm).
+- Node 24, **npm >= 11.16** (not pnpm). `frontend/.npmrc` enforces the version (`engine-strict`), only resolves releases at least 7 days old when the lockfile changes (`min-release-age`; `npm ci` installs the lockfile as is, so review lockfile changes in PRs) and fails on unreviewed install scripts (`strict-allow-scripts`).
 
 ## Commands (from `frontend/`)
 - `npm run dev` · `npm run lint` · `npm run typecheck` · `npm test` · `npm run build`
@@ -72,6 +72,7 @@ frontend/components/ · utils/   generic, feature-agnostic UI and helpers
 - Minimal personal data and **never in logs** (no contact details, no plain IPs, no request bodies). GDPR compliant; the policy lives in `content/politica-de-privacidad.md` and must reflect any new data collected or external service it is sent to.
 - Always escape report text: no `v-html` with user content.
 - Rate limit every endpoint that costs money or writes (report, describe, upload signature, photo search).
+- Dependencies: a new dependency with an install script fails `npm install` until it is reviewed and added to `allowScripts` in `frontend/package.json`: `npm approve-scripts <pkg>` (pinned to the exact version, so a version bump needs a new review) only if it really needs to build or download a binary, otherwise `npm deny-scripts <pkg>`. Don't bypass `min-release-age` or use `--dangerously-allow-all-scripts` without a reason (e.g. an urgent security fix).
 - Think about abuse: fake reports, "reward" scams and spam. Automatic moderation alone is not enough.
 
 ## Code rules
