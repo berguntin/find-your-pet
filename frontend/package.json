@@ -3,7 +3,20 @@
     "private": true,
     "type": "module",
     "engines": {
-        "node": "24.x"
+        "node": "24.x",
+        "npm": ">=11.16.0"
+    },
+    "allowScripts": {
+        "@parcel/watcher@2.5.0": true,
+        "esbuild@0.21.5": true,
+        "esbuild@0.24.0": true,
+        "esbuild@0.28.2": true,
+        "fsevents@2.3.3": true,
+        "unrs-resolver@1.12.2": true,
+        "@google/genai": false,
+        "@vercel/speed-insights": false,
+        "protobufjs": false,
+        "vue-demi": false
     },
     "scripts": {
         "build": "nuxt build",
@@ -44,6 +57,7 @@
         "nuxt": "3.14.159",
         "nuxt-auth-utils": "0.5.30",
         "nuxt-swiper": "1.2.2",
+        "ofetch": "^1.5.1",
         "openai": "^7.39.0",
         "postgres": "^3.4.9",
         "vue": "latest",
